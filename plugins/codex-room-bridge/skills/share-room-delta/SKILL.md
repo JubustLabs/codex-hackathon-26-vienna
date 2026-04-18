@@ -25,13 +25,13 @@ Primary path:
 Shell fallback:
 
 ```bash
-cd georg
+cd /path/to/codex-hackathon-26-vienna
 just bridge-submit ROOM_ID PARTICIPANT_ID SOURCE_AGENT "Keep the Bun server as the single realtime process."
 ```
 
 For an interactive lane instead of a one-shot submit:
 
 ```bash
-cd georg
+cd /path/to/codex-hackathon-26-vienna
 just bridge-watch ROOM_ID PARTICIPANT_ID SOURCE_AGENT
 ```

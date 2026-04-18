@@ -32,7 +32,7 @@ bun run build
 cp out/realtime-alignment.mp4 ../slides/public/hackathon-video.mp4
 ```
 
-Or, from `georg/`, use the bundled just recipe:
+Or, from the repo root, use the bundled just recipe:
 
 ```bash
 just demo

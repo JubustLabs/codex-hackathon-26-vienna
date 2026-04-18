@@ -5,9 +5,7 @@ cd "$(dirname "$0")/.."
 
 files=()
 for file in "$@"; do
-  case "$file" in
-    georg/*) files+=("${file#georg/}") ;;
-  esac
+  [ -f "$file" ] && files+=("$file")
 done
 
 if [ ${#files[@]} -eq 0 ]; then

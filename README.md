@@ -93,7 +93,7 @@ just video-long-render
 
 ## C. Basic App Flow
 
-Run these from `georg/`.
+Run these from the repo root.
 
 ### Setup
 

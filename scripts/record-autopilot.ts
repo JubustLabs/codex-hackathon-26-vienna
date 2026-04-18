@@ -2,7 +2,7 @@
 /**
  * Records a clean 1080p capture of the autopilot flow in the browser.
  *
- * Output: georg/video/public/autopilot-capture.webm
+ * Output: video/public/autopilot-capture.webm
  *
  * Usage:
  *   bun scripts/record-autopilot.ts                  # 90s capture at default tempo

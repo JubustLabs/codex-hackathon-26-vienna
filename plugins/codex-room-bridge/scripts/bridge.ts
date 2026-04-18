@@ -1,6 +1,6 @@
 import readline from "node:readline";
 
-import type { AgentSocketServerMessage } from "../../../georg/shared/contracts";
+import type { AgentSocketServerMessage } from "../../../shared/contracts";
 
 type Command = "submit" | "watch";
 
@@ -17,8 +17,8 @@ type Options = {
 
 function usage() {
   return `Usage:
-  cd georg && just bridge-submit ROOM PARTICIPANT alice-codex "..."
-  cd georg && just bridge-watch ROOM PARTICIPANT alice-codex
+  cd /path/to/codex-hackathon-26-vienna && just bridge-submit ROOM PARTICIPANT alice-codex "..."
+  cd /path/to/codex-hackathon-26-vienna && just bridge-watch ROOM PARTICIPANT alice-codex
 
 Options:
   --room-id          Room id from the browser UI

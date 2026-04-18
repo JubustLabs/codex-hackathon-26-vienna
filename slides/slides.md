@@ -170,7 +170,7 @@ layout: center
 </p>
 
 <!--
-If the video is missing, run from georg/: `just demo` (renders with Remotion, copies into slides/public, then starts the deck).
+If the video is missing, run from the repo root: `just demo` (renders with Remotion, copies into slides/public, then starts the deck).
 -->
 
 ---

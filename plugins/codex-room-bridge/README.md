@@ -24,7 +24,7 @@ bun install
 Start the app first:
 
 ```bash
-cd georg
+cd /path/to/codex-hackathon-26-vienna
 export ALLOW_LOCAL_HEURISTIC_FALLBACK=1
 just dev
 ```
@@ -64,7 +64,7 @@ In the browser room UI, copy the `Room id` and `Your participant id` from the `B
 Open a live bridge:
 
 ```bash
-cd georg
+cd /path/to/codex-hackathon-26-vienna
 just bridge-watch ROOM_ID PARTICIPANT_ID alice-codex
 ```
 
@@ -73,7 +73,7 @@ Every non-empty line you type becomes a pending private delta. Promote or discar
 For a one-shot submit instead of an interactive session:
 
 ```bash
-cd georg
+cd /path/to/codex-hackathon-26-vienna
 just bridge-submit ROOM_ID PARTICIPANT_ID alice-codex "Keep the private agent lane separate from shared room state."
 ```
 

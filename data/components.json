@@ -4,7 +4,7 @@
     "title": "React Client Shell",
     "kind": "frontend",
     "summary": "The browser client surface for room collaboration, ADR editing, and plan review.",
-    "evidence": ["georg/src"],
+    "evidence": ["src"],
     "status": "confirmed"
   },
   {
@@ -12,7 +12,7 @@
     "title": "Bun Realtime Server",
     "kind": "backend",
     "summary": "Single-process HTTP and WebSocket server that persists events and broadcasts room updates.",
-    "evidence": ["georg/server/index.ts"],
+    "evidence": ["server/index.ts"],
     "status": "confirmed"
   },
   {
@@ -20,7 +20,7 @@
     "title": "SQLite Event Log",
     "kind": "storage",
     "summary": "Append-only event log and snapshot state stored locally for the POC.",
-    "evidence": ["georg/server/db.ts"],
+    "evidence": ["server/db.ts"],
     "status": "confirmed"
   }
 ]

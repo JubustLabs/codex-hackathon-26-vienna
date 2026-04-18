@@ -35,7 +35,7 @@ After rendering, copy the mp4 into the slides project so the embedded `<video>` 
 cp out/realtime-alignment.mp4 ../slides/public/hackathon-video.mp4
 ```
 
-Or use the top-level justfile tasks (from `georg/`):
+Or use the top-level justfile tasks from the repo root:
 
 ```bash
 just video-render     # renders video

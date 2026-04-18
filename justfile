@@ -56,16 +56,16 @@ check: ensure-app
   bun run check
 
 bridge-watch room_id participant_id source_agent="codex-room-bridge" server="http://localhost:3001":
-  cd .. && bun plugins/codex-room-bridge/scripts/bridge.ts watch --room-id "{{room_id}}" --participant-id "{{participant_id}}" --source-agent "{{source_agent}}" --server "{{server}}"
+  bun plugins/codex-room-bridge/scripts/bridge.ts watch --room-id "{{room_id}}" --participant-id "{{participant_id}}" --source-agent "{{source_agent}}" --server "{{server}}"
 
 bridge-submit room_id participant_id source_agent text server="http://localhost:3001":
-  cd .. && bun plugins/codex-room-bridge/scripts/bridge.ts submit --room-id "{{room_id}}" --participant-id "{{participant_id}}" --source-agent "{{source_agent}}" --server "{{server}}" --text "{{text}}"
+  bun plugins/codex-room-bridge/scripts/bridge.ts submit --room-id "{{room_id}}" --participant-id "{{participant_id}}" --source-agent "{{source_agent}}" --server "{{server}}" --text "{{text}}"
 
 precommit-install:
-  pre-commit install -c georg/.pre-commit-config.yaml --install-hooks
+  pre-commit install -c .pre-commit-config.yaml --install-hooks
 
 precommit-run:
-  pre-commit run --all-files -c georg/.pre-commit-config.yaml
+  pre-commit run --all-files -c .pre-commit-config.yaml
 
 # --- video (Remotion) -----------------------------------------------------
 

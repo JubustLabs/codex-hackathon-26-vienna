@@ -161,10 +161,10 @@ dist
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/node,visualstudiocode
-georg/db/*.sqlite
-georg/db/*.sqlite-shm
-georg/db/*.sqlite-wal
-!georg/db/.gitkeep
-georg/db/workspace.sqlite
-georg/db/workspace.sqlite-wal
-georg/video/public/autopilot-capture.webm
+db/*.sqlite
+db/*.sqlite-shm
+db/*.sqlite-wal
+!db/.gitkeep
+db/workspace.sqlite
+db/workspace.sqlite-wal
+video/public/autopilot-capture.webm

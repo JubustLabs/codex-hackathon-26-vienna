@@ -6,8 +6,7 @@ import {
   adrSectionOrder,
   alignmentNodeTypes,
   roomModes,
-  type AdrSectionKey,
-} from "../../../georg/shared/contracts";
+} from "../../../shared/contracts";
 
 const participantRoles = ["decision_owner", "contributor", "observer"] as const;
 const resolutionTypes = ["agreement", "non_blocking", "dissent"] as const;
