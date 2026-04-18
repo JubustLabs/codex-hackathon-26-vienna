@@ -12,7 +12,7 @@ const CAPTIONS: Caption[] = [
   { at: 8, hold: 6, kicker: "STEP 2 · PRIVATE AGENT", body: "Each local codex drops a delta only its owner sees." },
   { at: 16, hold: 6, kicker: "STEP 3 · PROMOTE", body: "Humans promote the good deltas. Nothing leaks on its own." },
   { at: 24, hold: 6, kicker: "STEP 4 · SYNTHESIS", body: "Orchestrator re-anchors the room to one shared picture." },
-  { at: 32, hold: 10, kicker: "STEP 5 · ADR", body: "Every section claimed, drafted, reviewed — not a noisy transcript." },
+  { at: 32, hold: 10, kicker: "STEP 5 · DECISION", body: "Every section claimed, drafted, reviewed — not a noisy transcript." },
   { at: 46, hold: 10, kicker: "STEP 6 · PLAN", body: "Workstreams, owners, first step — ready for execution." },
   { at: 58, hold: 12, kicker: "STEP 7 · HANDOFF", body: "One JSON envelope. One decision, not four divergent ones." },
 ];

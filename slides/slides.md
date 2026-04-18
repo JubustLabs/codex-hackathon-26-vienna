@@ -72,7 +72,7 @@ class: text-center
 - Slack threads drifting in parallel
 - Everyone ships different code
 - Nobody trusts any of it
-- The ADR — if one exists — is stale by Monday
+- The decision record — if one exists — is stale by Monday
 
 </v-clicks>
 
@@ -84,7 +84,7 @@ class: text-center
 
 1. A **shared room** where state is synthesized live
 2. **Human control** over what enters it
-3. A **ratchet** from decision → ADR → plan → handoff
+3. A **ratchet** from conversation → decision → plan → handoff
 4. **Evidence** every step traces back to
 
 </div>
@@ -102,7 +102,7 @@ class: text-center
 - **One shared room** — humans + agents see the same synthesized state
 - **Private work stays private** — your agents drop deltas only you see, then *you* promote
 - **Orchestrator, not autopilot** — synthesizes, nudges, routes insights · never decides
-- **Gates, not drift** — ADR approved → plan generated → handoff shipped
+- **Gates, not drift** — decision approved → plan generated → handoff shipped
 - **Evidence, not vibes** — every node traces back to an event in the log
 
 </v-clicks>
@@ -166,7 +166,7 @@ layout: center
 />
 
 <p class="text-center opacity-70 text-xs mt-3" style="margin-bottom: 0;">
-  44 seconds · a room converges on an ADR, generates a plan, ships a handoff
+  44 seconds · a room converges on a decision, generates a plan, ships a handoff
 </p>
 
 <!--
@@ -187,7 +187,7 @@ If the video is missing, run from the repo root: `just demo` (renders with Remot
 2. **Create a room** with a bounded decision
 3. Post two utterances → alignment board populates
 4. Submit a **private delta** → **promote** it
-5. **Claim** ADR → **Regenerate** → **Review** → **Approve**
+5. **Claim** a section → **Regenerate** → **Review** → **Approve**
 6. **Generate plan** → **Accept owner** → **Approve**
 7. **Generate handoff** → download JSON
 
@@ -236,7 +236,7 @@ flowchart LR
   subgraph server[Bun + SQLite]
     R[Shared room]
     O[Orchestrator]
-    ADR[ADR]
+    ADR[Decision]
     PL[Plan]
     HO[Handoff]
   end

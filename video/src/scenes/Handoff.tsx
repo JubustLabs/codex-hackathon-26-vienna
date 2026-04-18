@@ -3,7 +3,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { font, theme } from "../lib/theme";
 import { fadeUp, pop } from "../lib/motion";
 
-const flags = ["ADR sections", "ADR reviewed", "No blockers", "Plan owners"];
+const flags = ["Decision sections", "Decision reviewed", "No blockers", "Plan owners"];
 
 export const Handoff = () => {
   const frame = useCurrentFrame();
