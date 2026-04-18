@@ -9,6 +9,8 @@ Primary goal: prove that a text-first real-time workspace — with private human
 
 For the POC, "alignment" means participants can independently restate the problem, chosen option, key tradeoffs, and immediate workstreams closely enough that the room does not need to reopen the decision before execution starts. It does not require unanimous enthusiasm, but it does require shared clarity.
 
+The primary thing being proved is still human alignment. Orchestrated private-agent collaboration is the mechanism under test, not the final success criterion by itself.
+
 ---
 
 ## 1. Product Summary
@@ -37,6 +39,7 @@ The first thing we must prove is **human alignment with mediated agent support**
 - A concrete implementation plan tied to the ADR is the artifact teams want to leave the room with.
 - Live ownership — who is taking which section, in real time — prevents duplicate work better than after-the-fact coordination.
 - Private agents are useful only if the shared orchestrator can merge, compare, and route their outputs without turning the room into noise.
+- Private-agent orchestration matters only insofar as it improves human convergence, artifact quality, and clarity of next steps.
 
 ## 3. POC Goals
 
@@ -51,6 +54,7 @@ The first draft must validate, with at least one recorded 3-person session per c
 7. When relevant existing components or hard workspace guardrails exist, the final ADR+plan either references them explicitly or records a human-readable justification for not using them.
 8. Section-level ownership prevents silent overlap across at least one scripted concurrent-edit scenario (§25).
 9. **Baseline head-to-head:** in a **45-minute** session on the same topic, same pre-read, and same participant count, the workspace beats "Google Doc + Claude copy-paste + facilitated meeting" on both: (a) blind review of the exported ADR+plan using the rubric in §25 (problem framing, decision clarity, tradeoff explicitness, implementation specificity, owner clarity) by 2 of 3 reviewers, and (b) the post-session participant alignment check.
+10. At least **60%** of promoted agent deltas and orchestrator-routed insights are marked `relevant` by the owning / receiving human, or are incorporated into the approved alignment snapshot, ADR, or plan.
 
 The combined baseline comparison is the load-bearing one. Without it, the other metrics are self-referential.
 
@@ -113,7 +117,7 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 
 - **Decision owners.** 1-3 humans named when the room is created. They are accountable for the final decision and form the formal approval set for the ADR and plan.
 - **Contributors.** Humans who participate in the room, add constraints/options/questions/tradeoffs, and may edit claimed sections. They do not formally approve the ADR or plan, but disagreements they raise remain visible until resolved, recorded as dissent, or explicitly marked non-blocking.
-- **Attached agents.** Private, human-owned helpers. They help their human think locally, then submit typed deltas into the merge layer.
+- **Attached agents.** Private, human-owned helpers. They help their human think locally. Their deltas may be visible to the orchestrator in pending private form for routing/comparison, but only promoted deltas can influence shared alignment state or other participants.
 - **Shared orchestrator.** One system-owned voice that synthesizes the room, compares participant proposals, routes insights across humans, and challenges low-quality reasoning against domain constraints, guardrails, and evidence.
 - **Observers.** Read/comment only. Never part of the approval set.
 
@@ -125,13 +129,13 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 3. The pattern library pre-fetches matches by topic tags.
 4. The component catalog refreshes from workspace evidence sources and surfaces likely reusable components for the topic.
 5. Participants can review the active guardrails before discussion starts.
-6. Participants may attach agents.
+6. Participants may optionally attach one or more private agents.
 
 ### 7.2 During the session
 1. Humans type ideas, constraints, tradeoffs.
-2. The classifier (`gpt-5.4-nano` or `gpt-5-mini`) tags each utterance with candidate alignment-node deltas.
-3. Participant agents and the classifier turn local reasoning into typed deltas.
-4. The orchestrator (`gpt-5.4` or `gpt-5.4-mini`) runs every 10s over the last window + current alignment snapshot, emitting a single `orchestrator_update`.
+2. The classifier (Haiku) tags each utterance with candidate alignment-node deltas.
+3. Participant agents produce private typed-delta candidates in the perspective pane. Pending candidates are visible only to the owning human and the orchestrator. Humans approve, edit, discard, or promote them.
+4. The orchestrator (Sonnet) runs every 10s over the last shared merge window + current alignment snapshot, emitting a single `orchestrator_update`.
 5. The alignment board updates with: goals, constraints, options, tradeoffs, risks, open questions, agreements, unresolved differences.
 6. The orchestrator highlights where one person's proposal is relevant to another person's blocker or domain concern.
 7. Pattern panel surfaces matches with a short "why this" justification.
@@ -166,7 +170,7 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 
 ## 9. POC Scope
 
-**In:** text-first collaboration, one workspace, one live room type, one shared orchestrator stream, per-human perspective panes, attached personal agents contributing typed deltas, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, ADR revision history, typed subdecision tracking, implementation plan generation + approval, live ownership, audit log.
+**In:** text-first collaboration, one workspace, one live room type, one shared orchestrator stream, per-human perspective panes, flexible attached private-agent fan-in per participant, pending private agent deltas visible to owner + orchestrator, human-promoted agent deltas entering shared reasoning, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, ADR revision history, typed subdecision tracking, implementation plan generation + approval, live ownership, audit log.
 
 **Out:** voice, video, multiple room archetypes, multi-workspace federation, external IdPs, analytics dashboards, autonomous execution, unrestricted public agent chatter, and deep whole-codebase semantic discovery beyond evidence-backed POC heuristics.
 
@@ -215,6 +219,7 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 - Typed subdecisions use optimistic concurrency with `base_revision_id`.
 - The server may auto-merge subdecision writes only when they touch disjoint fields or additive collections.
 - If two writes change the same semantic field of a subdecision, the server emits a conflict record instead of guessing a merge. Humans resolve that conflict explicitly.
+- Pending private agent deltas do **not** participate in shared conflict handling because they are not part of shared state until promotion.
 
 ## 11. Major Backend Components
 
@@ -227,7 +232,7 @@ Runs per utterance. Small GPT classifier prompt: given utterance + last alignmen
 Cost profile: ~500 input + 200 output tokens per call. Fires only on human utterances (not orchestrator output, not claim events).
 
 ### 11.3 Agent gateway
-Maintains per-human private agent sessions, auth scopes, and typed-delta submission. Agent output never lands in the shared room directly; it enters the working layer tagged with owner, audience, and confidence.
+Maintains per-human private agent sessions, auth scopes, and pending private agent deltas. Agent output never lands in the shared room directly. It first becomes a pending private delta visible to the owning human and the orchestrator. Only human promotion moves that delta into shared reasoning with owner, audience, and confidence metadata.
 
 ### 11.4 Orchestrator worker
 The product's center of gravity. See §13 for the full spec. One call every 10s over the last window, or on manual "synthesize now". Emits exactly one `orchestrator_update` event plus optional targeted routing suggestions for specific participants.
@@ -251,7 +256,7 @@ Builds a workspace-local catalog of likely reusable components from evidence-fir
 Materializes immutable `adr_revision`, `subdecision_revision`, and `plan_revision` snapshots from the event stream. Creates revisions on manual checkpoint, `submit_for_review`, approval, and conflict resolution. Supports replay, diffing, and approval provenance without making mutable draft rows the source of truth.
 
 ### 11.11 Routing and merge service
-Consumes human utterances, classifier deltas, and agent deltas; clusters them by topic and audience; and prepares merge candidates for the orchestrator. This is where the system decides that A's proposal is relevant to B's blocker, or that C's idea conflicts with a domain rule already captured elsewhere.
+Consumes human utterances, classifier deltas, and promoted agent deltas for shared reasoning; clusters them by topic and audience; and prepares merge candidates for the orchestrator. It may also inspect pending private agent deltas for owner-scoped routing/comparison, but raw private content does not enter shared merge candidates until promotion. This is where the system decides that A's proposal is relevant to B's blocker, or that C's idea conflicts with a domain rule already captured elsewhere.
 
 ## 12. Realtime Collaboration Model
 
@@ -287,9 +292,9 @@ This schema is **frozen for the POC**. Every downstream component targets it.
 
 ### 12.2 Three-layer signal model
 
-- **Private layer.** Each human and their attached agent iterate locally. Private agent output stays visible only to the owning human unless promoted as typed deltas.
-- **Working merge layer.** Human utterances, classifier deltas, and promoted agent deltas are deduplicated, clustered by novelty hash, audience-scored, and prepared for orchestrator reasoning. Internal — not shown directly.
-- **Shared layer.** Only orchestrator updates, alignment snapshots, pattern suggestions, component suggestions, guardrail alerts, ADR/plan diffs, ownership events.
+- **Private layer.** Each human and their attached agent iterate locally. Pending private agent deltas are visible to the owning human and the orchestrator only.
+- **Working merge layer.** Human utterances, classifier deltas over those utterances, and human-promoted agent deltas are deduplicated, clustered by novelty hash, audience-scored, and prepared for shared orchestrator reasoning. Internal — not shown directly.
+- **Shared layer.** Only orchestrator updates, alignment snapshots, pattern suggestions, component suggestions, guardrail alerts, ADR/plan diffs, ownership events, and orchestrator-routed insights intentionally published to other participants.
 
 ### 12.3 Room modes
 
@@ -315,7 +320,7 @@ Attached agents can only act under their owning human's active claim scope.
 
 This is the single most important component. Getting it right beats everything else.
 
-### 13.1 Typed deltas (classifier output)
+### 13.1 Typed deltas (merge-layer inputs)
 
 | Delta type | Payload |
 | --- | --- |
@@ -338,19 +343,23 @@ This is the single most important component. Getting it right beats everything e
 
 Runs when **any** of:
 - 10 seconds elapsed since last run AND ≥ 1 new high-signal delta
-- 50 raw events in backlog
+- 50 merge-layer items in backlog
 - explicit human "synthesize now"
 
 Skips (no-op) if: zero novelty since last run (measured by novelty hashes).
 
 ### 13.3 Orchestrator input
 
-- Last N=50 raw events (utterances, deltas, claim events) from the window
+- Last N=50 merge-layer items (human utterances, classifier deltas, promoted agent deltas, claim events) from the window
 - Current alignment snapshot (all nodes)
 - Room mode
 - Active guardrail snapshot
 - Top matched confirmed components
+- Pending private agent deltas, owner-scoped, available only for private routing/comparison and promotion prioritization
+- Recent routing feedback (`relevant` / `not_relevant`) for participant pairs
 - Current ADR draft headers only (not full body)
+
+Pending private agent deltas may influence private orchestrator nudges or routing candidates, but they may not create shared alignment-node changes or appear in shared synthesis until promoted by the owning human.
 
 ### 13.4 Orchestrator output contract
 
@@ -363,7 +372,7 @@ Exactly one event:
   "common_ground_changes": [{ "node_id": "...", "op": "add|update" }],
   "blocker_changes": [{ "node_id": "...", "note": "..." }],
   "alignment_node_deltas": [{ "op": "add|update|supersede", "node": { ... } }],
-  "targeted_feedback": [{ "participant_id": "usr_b", "message": "A's proposal may address your blocker on onboarding state." }],
+  "targeted_feedback": [{ "participant_id": "usr_b", "message": "A's proposal may address your blocker on onboarding state.", "delivery_scope": "private" }],
   "routed_insights": [{ "from_actor_id": "usr_a", "to_actor_id": "usr_b", "reason": "relevant_domain_constraint" }],
   "suggested_next_move": "e.g. 'narrow to 2 options' | 'draft decision on X' | null",
   "source_event_ids": ["evt_..."],
@@ -378,16 +387,21 @@ Every synthesis carries pointers back to the raw events it drew from. This is ho
 - **Model timeout / 5xx.** Publish an `orchestrator.update.delayed` marker. Do not retry silently. Skip one window.
 - **Hallucinated agreement.** Every `agreement` node shows a "Reject" control. Rejecting demotes the node to `unresolved_difference` and records an `orchestrator.correction` event that the next call sees.
 - **Bad routing.** Humans can mark targeted feedback as `not_relevant`; repeated misses lower routing confidence for that participant pair.
+- **Pre-approval leakage.** Pending private deltas can inform only private orchestrator nudges; they cannot update shared alignment state or be shown to other participants until promoted.
 - **Runaway cost.** Cap at 8 orchestrator calls per minute per room. Hard stop.
 - **Low-novelty loops.** Novelty-hash skip (§13.2) prevents re-synthesis of identical state.
 
 ### 13.6 Latency budget
 
-- Classifier (`gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): p50 ≤ 800ms, p95 ≤ 2s
-- Orchestrator (`gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Classifier (Haiku): p50 ≤ 800ms, p95 ≤ 2s
+- Orchestrator (Sonnet): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Classifier (OpenAI `gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): target the same p50 ≤ 800ms, p95 ≤ 2s budget
+- Orchestrator (OpenAI `gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): target the same p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Private agent delta generation (perspective pane only): p50 ≤ 4s, p95 ≤ 8s; this is non-blocking for the shared room
+- Promotion-to-merge ingestion after human approval: p50 ≤ 200ms, p95 ≤ 500ms
 - WebSocket fanout: ≤ 100ms
 
-These are product latency targets, not vendor guarantees. OpenAI model selection should prefer the smallest model that meets orchestrator-quality evals and the routing guidance in §23.1.
+These are product latency targets, not vendor guarantees. OpenAI model selection should prefer the smallest model that meets orchestrator-quality evals and the routing guidance in §23.1. Shared-room latency targets assume the reference evaluation profile in §23.3, only promoted deltas enter shared reasoning, and workspace backpressure keeps merge-layer volume in the same order of magnitude as human utterance volume.
 
 ### 13.7 Denoising controls
 
@@ -632,11 +646,12 @@ The implementation plan follows the same draft + immutable revision pattern as t
 | `participant` | Human in a room |
 | `agent_runtime` | (v2) Connected attached agent |
 | `utterance` | Raw human contribution |
-| `agent_delta` | Typed classifier or agent output. `source_event_ids[]`, `supersedes?` |
+| `agent_delta` | Typed agent output with `approval_state` (`pending` | `promoted` | `discarded`) and visibility (`owner_orchestrator` | `shared_merge`) |
 | `alignment_node` | Goal / constraint / option / tradeoff / risk / question / agreement / unresolved_difference |
 | `component_catalog_entry` | Autodiscovered or confirmed reusable module/service/package |
 | `component_evidence` | File-path or document evidence for a component entry |
 | `orchestrator_update` | Shared synthesized update. `source_event_ids[]`, `supersedes?` |
+| `routing_feedback` | Human relevance signal on an orchestrator-routed insight |
 | `pattern` | Seeded library entry |
 | `adr` | Formal decision record, section-keyed |
 | `adr_revision` | Immutable whole-ADR snapshot used for review, approval, and diff |
@@ -652,7 +667,7 @@ The implementation plan follows the same draft + immutable revision pattern as t
 | `implementation_package` | Handoff bundle with approved ADR / plan revision pointers |
 | `event_log` | Append-only audit + replay stream |
 
-Every derived entity (`agent_delta`, `orchestrator_update`, `alignment_node`) carries `source_event_ids[]` and optional `supersedes` so the three-layer signal flow is fully auditable and replayable.
+Every derived entity (`agent_delta`, `orchestrator_update`, `alignment_node`) carries `source_event_ids[]` and optional `supersedes` so the three-layer signal flow is fully auditable and replayable. `pending` agent deltas are audited too, but remain visible only to the owning human and the orchestrator.
 
 ## 18. Realtime Event Model
 
@@ -671,7 +686,10 @@ room.mode_changed                 { mode: 'explore'|'narrow'|'decide'|'draft_adr
 participant.joined
 participant.left
 human.utterance.created           { text, participant_id }
-agent.delta.submitted             { delta_type, payload, source_utterance_id }
+classifier.delta.created          { delta_type, payload, source_utterance_id }
+agent.delta.submitted             { delta_id, delta_type, payload, owner_id, approval_state: 'pending', visibility: 'owner_orchestrator' }
+agent.delta.promoted              { delta_id, approved_by, approval_state: 'promoted', visibility: 'shared_merge' }
+agent.delta.discarded             { delta_id, discarded_by, approval_state: 'discarded' }
 alignment.correction.submitted    { node_id, proposed_type?, proposed_text?, source_event_ids[] }
 alignment.node.updated            { op, node }
 pattern.suggested                 { pattern_id, justification, source_event_ids[] }
@@ -680,6 +698,7 @@ guardrail.alerted                 { rule_key, severity, note, source_event_ids[]
 orchestrator.update.published     { ...§13.4 contract }
 orchestrator.update.delayed       { reason }
 orchestrator.correction           { rejected_update_id, reason }
+routing.feedback.recorded         { routing_id, participant_id, disposition: 'relevant'|'not_relevant' }
 adr.section.claimed               { section, claim_id, ttl_ms }
 adr.section.released              { section, reason: 'manual'|'timeout' }
 adr.section.overlap_warning       { section, attempted_by }
@@ -709,17 +728,18 @@ implementation.package.generated  { package_id }
 ```json
 {
   "id": "evt_...",
-  "type": "agent.delta.submitted",
+  "type": "agent.delta.promoted",
   "roomId": "room_123",
-  "actorId": "agent_alice_primary",
+  "actorId": "user_alice",
   "timestamp": "2026-04-18T12:00:00Z",
-  "source_event_ids": ["evt_utt_77"],
+  "source_event_ids": ["evt_agent_delta_77"],
   "supersedes": null,
   "payload": {
     "deltaType": "constraint_detected",
     "text": "Low-latency responses are a hard requirement.",
     "confidence": 0.86,
-    "hardness": "hard"
+    "hardness": "hard",
+    "approvedBy": "user_alice"
   }
 }
 ```
@@ -728,13 +748,14 @@ All events carry `source_event_ids[]` and optional `supersedes` where applicable
 
 ## 19. Attached Agents and Private Collaboration
 
-**POC ships the minimal real protocol, not a stub.** Each participant may connect one private agent session. The product does not expose raw agent chatter in the shared room. Instead, agent output is visible in the participant's perspective pane, can be promoted as typed deltas, and is mediated by the orchestrator before affecting the shared room.
+**POC ships the minimal real protocol, not a stub.** Each participant may connect one or more private agent sessions. The product does not expose raw agent chatter in the shared room. Instead, agent output first appears as pending private deltas visible to the owning human and the orchestrator. Pending deltas may inform private orchestrator nudges, but only promoted deltas can affect shared reasoning or other participants.
 
-Rationale: the product concept is the ping-pong loop between human, private agent, and shared orchestrator. If that loop is missing, the POC proves the wrong thing.
+Rationale: the product concept is the ping-pong loop between human, private agent, and shared orchestrator. The load-bearing boundary is still human approval before shared influence. Without that boundary, the POC proves the wrong thing and weakens privacy / accountability.
 
 ### 19.1 Privacy enforcement
 
 - Perspective-pane subscriptions are **per-user on the server**. The backend filters non-owner private deltas out before fanout. No client-side "hide" that relies on frontend trust.
+- Pending private deltas are visible only to the owning human and the orchestrator.
 - Shared synthesis never includes raw private agent content — only promoted typed deltas and orchestrator conclusions that reference them.
 - Attached agents can only act under their owning human's active claim.
 - Every promoted delta records human owner, agent id, and whether the human explicitly approved it before it entered the merge layer.
@@ -742,8 +763,10 @@ Rationale: the product concept is the ping-pong loop between human, private agen
 ### 19.2 Minimal POC protocol
 
 - agent runtime connects over WebSocket with scoped room + owner identity
-- agent may submit `agent.delta.submitted` events with typed payloads only
-- human can approve, edit, or discard agent suggestions before promotion
+- agent may submit `agent.delta.submitted` events with typed payloads; default state is `pending`
+- pending deltas are visible to owner + orchestrator only
+- human can approve, edit, or discard pending deltas before promotion
+- only `agent.delta.promoted` enters shared reasoning
 - orchestrator may route relevant deltas to another participant, but never exposes the source participant's full private transcript
 
 ## 20. Permissions and Governance
@@ -752,6 +775,7 @@ Rationale: the product concept is the ping-pong loop between human, private agen
 - Room owners can create scoped guardrail overrides for their room; those overrides are visible and audited
 - Workspace owners define default guardrails and can refresh / confirm the component catalog
 - Participants contribute and may attach their own agents
+- Only the owning human may promote or discard that human's pending private agent deltas
 - **Only human decision owners** approve ADRs and plans
 - Any participant may raise an unresolved difference; it must be resolved, recorded as dissent, or marked `non_blocking` before approval can proceed
 - Observers can read/comment but never claim sections or block approval
@@ -781,9 +805,12 @@ POST /api/rooms/:id/mode                  { mode }
 GET  /api/rooms/:id/alignment
 POST /api/rooms/:id/alignment/corrections { node_id, proposed_type?, proposed_text? }
 GET  /api/rooms/:id/patterns
+GET  /api/rooms/:id/perspectives/:participantId
 POST /api/rooms/:id/orchestrator/synthesize
 POST /api/rooms/:id/orchestrator/reject   { update_id, reason }
 POST /api/rooms/:id/perspectives/:participantId/promote-delta
+POST /api/rooms/:id/perspectives/:participantId/discard-delta
+POST /api/rooms/:id/routings/:routingId/feedback   { disposition: 'relevant'|'not_relevant' }
 POST /api/rooms/:id/adr/sections/:section/claim
 POST /api/rooms/:id/adr/sections/:section/release
 POST /api/rooms/:id/adr/sections/:section/write  { diff }
@@ -841,7 +868,7 @@ This plan assumes an empty-slate repo. Phase 0 bootstraps the alignment workspac
 
 Human discussion | Orchestrator stream | Alignment board | Pattern suggestions | Component catalog | Guardrails | Ownership board | Perspective pane | ADR draft pane | Implementation plan pane
 
-The perspective pane is a first-class POC panel. It shows private agent suggestions, promoted deltas, routed insights from the orchestrator, and pending items that need the participant's approval.
+The perspective pane is a first-class POC panel. It shows pending private agent deltas, private orchestrator nudges visible only to that participant, promoted-delta history, routed insights that need acknowledgment, and explicit approve / edit / discard / promote controls.
 
 The ADR draft pane should expose:
 
@@ -868,14 +895,15 @@ Every orchestrator call reuses the same system prompt + alignment-schema stanza 
 
 ### 23.3 Back-of-envelope session cost
 
-A 45-minute session, 3 humans, moderate activity:
+A 45-minute session, 3 humans, moderate activity, reference eval profile with 4 attached private agents:
 
-- ~120 utterances × GPT classifier (~500 in / 200 out each) ≈ estimate after first real run
-- ~30 orchestrator calls (windows with novelty, out of 270 possible) × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
-- 1 ADR draft-all + 4 section regens × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
-- 1 plan generation × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
+- ~120 human utterances × Haiku classifier (~500 in / 200 out each) ≈ $0.10
+- ~48 private-agent turns producing pending deltas (~1k in / 250 out each on a small model) ≈ $0.24-$0.40
+- ~30 orchestrator calls (windows with novelty, out of 270 possible) × Sonnet (~3k in / 500 out each) ≈ $0.45
+- 1 ADR draft-all + 4 section regens × Sonnet ≈ $0.15
+- 1 plan generation × Sonnet ≈ $0.05
 
-Target: **under $1 per session** at POC scale. If this blows out, the orchestrator trigger (§13.2) is the first lever — raise the novelty threshold, lengthen the window.
+Reference target: **under $1.25 per session** at the eval profile above. Actual cost scales with attached-agent activity; the product model stays flexible, and workspace policy should tune agent-turn budgets / backpressure rather than impose a hard participant-level cap. If this blows out, the first levers are: raise the orchestrator novelty threshold, lengthen the window, reduce agent-turn budgets, and tighten promotion throttles so the merge layer stays close to human event volume.
 
 ### 23.4 Observability
 
@@ -905,14 +933,14 @@ Demo-first ordering. The orchestrator engine is second, not fifth — it is the 
 
 ### Phase 2 — Orchestrator engine v0 (2–3 days) — **core value**
 - Classifier worker (Haiku) turning utterances into typed deltas
-- Agent gateway with minimal private agent sessions
+- Agent gateway with configurable private agent sessions
 - Routing and merge service for cross-participant relevance detection
 - Alignment snapshot reducer targeting the frozen v1 taxonomy (§12.1)
 - Orchestrator worker (Sonnet) with full output contract (§13.4)
 - Novelty gating, batching, cap (§13.2, §13.5)
 - Guardrail snapshot + matched component inputs wired into orchestrator context
 - Alignment board UI with 8 node types
-- Exit: a 10-minute scripted brainstorm with 2 humans + 2 private agents produces a coherent alignment snapshot and ≤ 1 orchestrator update per 10s
+- Exit: a 10-minute scripted brainstorm with 2 humans and multiple attached private agents active produces a coherent alignment snapshot, shows no pending-private leakage into shared state before promotion, and stays at ≤ 1 orchestrator update per 10s
 
 ### Phase 3 — ADR editor and approval (2–3 days)
 - 12-section ADR model and editor
@@ -947,16 +975,16 @@ Demo-first ordering. The orchestrator engine is second, not fifth — it is the 
 - One-shot bundler: ADR + plan + patterns + alignment snapshot → JSON + Markdown export
 - Exit: a demo run produces a downloadable package
 
-### Phase 7+ (post-POC) — Richer agent protocol
-Capability negotiation, tool-permission boundaries, remote runtimes, and multi-agent per human. See §19.
+### Phase 7+ (post-POC) — Advanced agent protocol
+Capability negotiation, tool-permission boundaries, and remote runtimes. See §19.
 
 ## 25. Testing Strategy
 
 ### Automated
-- Unit: alignment reducer, novelty hashing, claim TTL, dissent gate, guardrail gating, component scan normalization, ADR revision creation, subdecision conflict detection
-- Integration: room lifecycle, claim contention, WebSocket event ordering, component refresh, guardrail snapshotting, revision replay from event log
+- Unit: alignment reducer, novelty hashing, claim TTL, dissent gate, guardrail gating, component scan normalization, ADR revision creation, subdecision conflict detection, promotion eligibility rules, pending-delta visibility rules
+- Integration: room lifecycle, claim contention, WebSocket event ordering, component refresh, guardrail snapshotting, revision replay from event log, pending-private deltas never mutating shared alignment before promotion
 - Contract: orchestrator output conforms to §13.4 schema on golden transcripts
-- UI: ADR approval flow, plan approval flow, owner-acceptance gating, ownership overlap warnings, perspective-pane promotion flow, subdecision conflict resolution
+- UI: ADR approval flow, plan approval flow, owner-acceptance gating, ownership overlap warnings, perspective-pane approve / discard / promote flow, routed-insight relevance feedback, subdecision conflict resolution
 
 ### Manual (scripted scenarios)
 - **S1:** two humans, one disagrees on an option → room enters `decide` mode → `draft_adr` is blocked until the room records dissent → approval with `dissent_recorded`
@@ -968,7 +996,7 @@ Capability negotiation, tool-permission boundaries, remote runtimes, and multi-a
 - **S7:** repo with a relevant existing component → component catalog surfaces it, and the plan either reuses it or explicitly justifies a net-new replacement
 - **S8:** two humans edit different fields of the same subdecision from the same base revision → server auto-merges into a new subdecision revision
 - **S9:** two humans edit the same field of the same subdecision from the same base revision → `subdecision.conflict.detected` appears and requires explicit resolution
-- **S10:** A's agent identifies a relevant risk for B's proposal → orchestrator routes it to B and records the cross-participant relevance
+- **S10:** A's agent identifies a relevant risk for B's proposal in A's perspective pane → A promotes it → orchestrator routes it to B → B marks it `relevant` and the routed insight is linked into shared reasoning
 - **S11:** baseline head-to-head (§3 goal 9) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers + the same participant alignment check in both conditions
 
 ### Alignment check protocol
@@ -980,6 +1008,7 @@ Capability negotiation, tool-permission boundaries, remote runtimes, and multi-a
 ### Baseline evaluation protocol
 - The workspace condition and baseline condition use the same briefing pack, participant roster size, and neutral moderator role.
 - The baseline is: shared Google Doc + private Claude/ChatGPT use + live meeting.
+- The thing being tested is not "who has AI." Both conditions permit private AI help. The delta under test is structured promotion, one shared orchestrator, explicit guardrails/component context, and approval-backed decision artifacts.
 - Reviewers only see the exported ADR + plan, anonymized and randomized.
 - Each reviewer scores 1-5 on: problem framing, decision clarity, tradeoff explicitness, implementation specificity, and owner clarity.
 - Each participant also completes the alignment check in both conditions.
@@ -1003,6 +1032,9 @@ Primary:
 - Percent hard-guardrail exceptions with explicit justification
 - Percent approved ADRs with replayable revision history and linked subdecision revisions
 - Time to resolve a structured subdecision conflict
+- Promotion rate for pending private agent deltas
+- Relevance rate for promoted agent deltas and orchestrator-routed insights
+- Pending-private leakage incidents into shared state
 - LLM cost per session
 
 Qualitative (from participants):
@@ -1020,7 +1052,7 @@ Mitigation: human "reject synthesis" control that demotes to `unresolved_differe
 Mitigation: frozen at 8 types for POC. Measure session-level "this didn't fit anywhere" corrections. Re-tune after 5 real sessions.
 
 ### 27.3 Cost runaway
-Mitigation: 8-call/min orchestrator cap (§13.5), novelty-gate skips, prompt caching, and strict per-human agent session limits.
+Mitigation: 8-call/min orchestrator cap (§13.5), novelty-gate skips, prompt caching, and workspace-configurable agent-turn budgets / promotion backpressure.
 
 ### 27.4 Ownership locks feel heavy
 Mitigation: 60s inactivity auto-release, visible claimant, overlap warning (not silent block with no recourse).
@@ -1046,6 +1078,9 @@ Mitigation: allow automatic merge only for disjoint structured fields. Same-fiel
 ### 27.11 Private agents create a second layer of noise instead of better thinking
 Mitigation: private suggestions require human approval before promotion, routing relevance is explicitly scored, and the shared room only sees orchestrated outputs.
 
+### 27.12 Orchestrator visibility into pending private deltas breaks user trust
+Mitigation: make owner + orchestrator visibility explicit in the UI, constrain pending-delta use to private routing/comparison only, forbid shared publication before promotion, audit every access/promotion/discard event, and allow stricter workspace settings if trust requirements are higher than routing quality needs.
+
 ## 28. Known Dials (not open questions)
 
 These were "open questions" in v0.1. They are tunable parameters now.
@@ -1058,6 +1093,8 @@ These were "open questions" in v0.1. They are tunable parameters now.
 - **Q6. Plan granularity.** Workstreams, not tickets (§16.3). If users complain it's too coarse, add a "break down" action that expands one workstream into sub-items.
 - **Q7. Component discovery confidence threshold.** Default: only `confirmed` components participate in approval gating. Candidate-only matches remain advisory.
 - **Q8. Subdecision threshold.** Default: create subdecisions only for architectural choices likely to change independently or deserve explicit conflict handling.
+- **Q9. Pending private delta visibility.** Default: owner + orchestrator only. The orchestrator may use them for private routing/comparison, never shared synthesis. If privacy expectations are stricter, disable orchestrator access and accept weaker cross-participant routing.
+- **Q10. Promotion backpressure.** Default: no hard product cap on attached agents. Use workspace-configurable soft budgets and queue backpressure so the merge layer stays near human event volume. Start evals at 3 promoted deltas per participant per 5 minutes, then scale up if routing quality holds.
 
 ## 29. Recommended Build Order
 
@@ -1070,9 +1107,9 @@ Same as §24 phases, because §24 was already ordered by demo value:
 5. Phase 4: Plan editor
 6. Phase 5: Decision context management
 7. Phase 6: Handoff package
-8. (Post-POC) Richer agent protocol
+8. (Post-POC) Advanced agent protocol
 
-This order preserves a demoable human-centered product by the end of Phase 5 (~6–9 days). Phase 6 is export polish. Agent connectivity is v2.
+This order preserves a demoable human-centered product by the end of Phase 5 (~6–9 days). Phase 6 is export polish. Advanced capability negotiation and remote agent runtimes are v2.
 
 ## 30. Prior Art and Positioning
 
@@ -1095,7 +1132,7 @@ Treat the first draft as a focused product experiment:
 
 - one central realtime room
 - one shared orchestrator voice (Sonnet, 10s windows, full §13.4 contract)
-- one private perspective pane and attached agent per participant
+- one private perspective pane per participant, with flexible attached-agent fan-in
 - one alignment model (the 8-type v1 taxonomy)
 - one seeded pattern library (flat JSON, tag retrieval)
 - one explicit guardrail layer (workspace defaults + room overrides)
@@ -1107,4 +1144,4 @@ Treat the first draft as a focused product experiment:
 - one optional handoff package
 - private human-agent ping-pong with orchestrated cross-participant routing as part of the POC foundation
 
-If Phases 0–5 hold and the combined baseline result lands, we have evidence that orchestrated private-agent collaboration beats the shared-doc baseline. That evidence earns the right to build v2 — richer agent connectivity, deeper memory, downstream execution automation. Without that result, the rest is decoration.
+If Phases 0–5 hold and the combined baseline result lands, we have evidence that the workspace improves human alignment over the shared-doc baseline, with orchestrated private-agent collaboration as part of the mechanism. That evidence earns the right to build v2 — richer agent connectivity, deeper memory, downstream execution automation. Without that result, the rest is decoration.
