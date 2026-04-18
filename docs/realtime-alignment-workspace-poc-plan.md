@@ -196,7 +196,7 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 - **Frontend:** React 19 + React Router (already in repo) + Vite
 - **Backend:** Bun server exposing HTTP + WebSocket from the same process
 - **Persistence:** **SQLite** (not Postgres — zero-ops for the demo; migrate later if needed)
-- **LLM:** Anthropic SDK, Claude Sonnet 4.6 for synthesis/drafting, Claude Haiku 4.5 for per-delta classification
+- **LLM:** Anthropic SDK and OpenAI Responses API. Primary Anthropic path: Claude Sonnet 4.6 for synthesis/drafting, Claude Haiku 4.5 for per-delta classification. OpenAI parity path: `gpt-5.4` / `gpt-5.4-mini` for synthesis and drafting, `gpt-5.4-nano` or `gpt-5-mini` for per-delta classification
 - **Auth:** magic-link + room token. No SSO.
 - **Deployment:** single host (Fly.io or equivalent). One `.env`. One process.
 
@@ -376,7 +376,11 @@ Every synthesis carries pointers back to the raw events it drew from. This is ho
 
 - Classifier (Haiku): p50 ≤ 800ms, p95 ≤ 2s
 - Facilitator (Sonnet): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Classifier (OpenAI `gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): target the same p50 ≤ 800ms, p95 ≤ 2s budget
+- Facilitator (OpenAI `gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): target the same p50 ≤ 3s, p95 ≤ 6s from batch close to publish
 - WebSocket fanout: ≤ 100ms
+
+These are product latency targets, not vendor guarantees. OpenAI model selection should prefer the smallest model that meets facilitator-quality evals and the routing guidance in §23.1.
 
 ### 13.7 Denoising controls
 
@@ -839,6 +843,15 @@ The ADR draft pane should expose:
 - **Facilitator synthesis:** Claude Sonnet 4.6 — better instruction-following on structured output
 - **ADR section draft:** Claude Sonnet 4.6 — one-shot, on demand
 - **Plan generation:** Claude Sonnet 4.6 — one-shot, on an approved ADR revision
+
+OpenAI parity routing:
+
+- **Classifier per utterance:** `gpt-5.4-nano` first, `gpt-5-mini` as fallback when the nano path misses extraction quality; keep `reasoning.effort` at `none` or `minimal`
+- **Facilitator synthesis:** `gpt-5.4-mini` first for lower latency; escalate to `gpt-5.4` only if evals show materially better synthesis / blocker detection; start with `reasoning.effort: low`
+- **ADR section draft:** `gpt-5.4-mini` for fast drafts, `gpt-5.4` for higher-stakes sections such as `Decision`, `Tradeoffs`, and `Implementation guidance`
+- **Plan generation:** `gpt-5.4-mini` by default, `gpt-5.4` when the workstream breakdown is too generic at mini quality
+
+OpenAI docs currently position `gpt-5.4` as the starting point for complex reasoning/coding and `gpt-5.4-mini` / `gpt-5.4-nano` for lower-latency, lower-cost workloads. `gpt-5-mini` remains a viable low-latency fallback in this plan when the smallest path is too weak for classification quality.
 
 No routing to Opus in the POC. Opus can be A/B'd later for facilitator only.
 
