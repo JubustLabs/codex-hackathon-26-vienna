@@ -1,0 +1,23 @@
+[
+  {
+    "id": "guardrail-openai-path",
+    "key": "openai_only_path",
+    "title": "Use one OpenAI path in the first draft",
+    "description": "The initial implementation should expose one backend path for LLM-backed synthesis and classification.",
+    "severity": "hard"
+  },
+  {
+    "id": "guardrail-section-locks",
+    "key": "single_writer_sections",
+    "title": "Use section-level single-writer claims",
+    "description": "ADR and plan prose must use explicit single-writer ownership instead of silent concurrent merges.",
+    "severity": "hard"
+  },
+  {
+    "id": "guardrail-text_first",
+    "key": "text_first",
+    "title": "Keep the product text first",
+    "description": "Audio, video, and multimodal collaboration are out of scope for the POC.",
+    "severity": "soft"
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "pattern-collab-adr",
+    "title": "Collaborative ADR Workspace",
+    "tags": ["adr", "architecture", "collaboration"],
+    "summary": "Use a structured ADR artifact with explicit approvers when the room needs durable agreement before execution."
+  },
+  {
+    "id": "pattern-right-rail-private",
+    "title": "Private Sidecar Assistants",
+    "tags": ["agents", "privacy", "workspace"],
+    "summary": "Keep private agent loops private until a human promotes the resulting delta into shared reasoning."
+  },
+  {
+    "id": "pattern-single-orchestrator",
+    "title": "Single Shared Orchestrator",
+    "tags": ["orchestrator", "realtime", "alignment"],
+    "summary": "Prefer one synthesized orchestration stream over multiple competing agent voices in the shared room."
+  }
+]
