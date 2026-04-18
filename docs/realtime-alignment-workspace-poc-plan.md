@@ -19,6 +19,8 @@ This product is a real-time alignment workspace. It is **not** an agent debate a
 - a concrete **implementation plan** derived from the approved ADR
 - an optional **handoff package** for downstream agent-assisted execution
 
+Closest mental model: a collaborative ADR workspace with Google-Docs-like shared presence and fast iteration, but **not** free-form simultaneous paragraph editing. Shared writing is coordinated through visible section ownership because silent overlap is exactly the failure mode this product is trying to remove.
+
 The counter-design we are explicitly avoiding is *N agents talking over each other in a shared timeline while humans scroll past*. Each human may privately attach their own agents, but only typed deltas cross into the shared room, and only one synthesized facilitator voice speaks to the group.
 
 Follow-on iterations can expand into deeper agent connectivity, richer pattern memory, and execution automation. The first thing we must prove is **human alignment**, not agent orchestration.
@@ -41,7 +43,7 @@ The first draft must validate, with at least one recorded 3-person session per c
 4. The final ADR has **all 12 sections (§15.2) populated** before approval, at least 80% auto-drafted.
 5. The implementation plan has an **explicit owner on every plan item** before handoff.
 6. Section-level ownership prevents silent overlap across at least one scripted concurrent-edit scenario (§25).
-7. **Baseline head-to-head:** in a timed session on the same topic, the ADR+plan produced by the workspace is rated higher on clarity and completeness than "Google Doc + Claude copy-paste + 1 hour meeting" by 2 of 3 blind reviewers.
+7. **Baseline head-to-head:** in a **45-minute** session on the same topic, same pre-read, and same participant count, the ADR+plan produced by the workspace scores higher than "Google Doc + Claude copy-paste + facilitated meeting" on the rubric in §25 (problem framing, decision clarity, tradeoff explicitness, implementation specificity, owner clarity) by 2 of 3 blind reviewers.
 
 Goal 7 is the load-bearing one. Without the baseline, the other metrics are self-referential.
 
@@ -86,15 +88,16 @@ Shared truth, permissions, events, and decisions live in a central backend. Atta
 
 ## 6. Primary Users
 
-- **Principal humans.** Architects, staff engineers, tech leads who own the decision.
+- **Decision owners.** 1-3 humans named when the room is created. They are accountable for the final decision and form the approval set for the ADR and plan.
+- **Contributors.** Humans who participate in the room, add constraints/options/questions, and may edit claimed sections, but do not block approval unless explicitly added to the decision-owner set.
 - **Attached agents (v2).** Private, human-owned helpers. Contribute only through typed deltas.
 - **Facilitator agent.** One shared system-owned voice that synthesizes the room.
-- **Observers.** Read/comment only.
+- **Observers.** Read/comment only. Never part of the approval set.
 
 ## 7. End-to-End User Journey
 
 ### 7.1 Before the session
-1. A user creates a room with topic, goal, and scope tags.
+1. A user creates a room with a **decision brief**: topic, topic tags, decision to make, goal, non-goals, scope, success bar, and initial decision owners.
 2. Participants are invited by link or email token.
 3. The pattern library pre-fetches matches by topic tags.
 4. (v2) Participants may attach agents.
@@ -108,14 +111,15 @@ Shared truth, permissions, events, and decisions live in a central backend. Atta
 6. The facilitator drafts neutral wording when agreement narrows.
 
 ### 7.3 Decision point
-1. The room switches to `decide` mode. Entry is blocked if ≥ 2 `unresolved_difference` nodes exist; the room must resolve them or record them as dissent (§15.5).
-2. The ADR draft becomes the primary artifact.
-3. Humans claim sections, edit, and approve.
-4. Approval is recorded with provenance: who approved, at what timestamp, based on which alignment snapshot.
+1. The room switches to `decide` mode once the option set has been narrowed and the team is ready to make the call.
+2. `Decide` mode is where the facilitator surfaces final blockers. Promotion from `decide` to `draft_adr` is blocked while any `unresolved_difference` exists without either a resolution or a linked dissent record (§15.5).
+3. The ADR draft becomes the primary artifact.
+4. Humans claim sections, edit, and request facilitator drafts as needed.
+5. Approval is recorded with provenance: who approved, at what timestamp, based on which alignment snapshot.
 
 ### 7.4 After the session
-1. The plan generator runs once on approved ADR → draft implementation plan.
-2. Humans claim workstreams, edit, and approve.
+1. Once the ADR is approved, a human triggers the plan generator to create the first draft implementation plan.
+2. Humans claim workstreams, edit sequencing and acceptance details, assign owners, and approve.
 3. An optional handoff package bundles ADR + plan + pattern references for downstream use.
 4. Useful decisions can be manually nominated as new patterns (no auto-promotion in POC).
 
@@ -239,10 +243,10 @@ This schema is **frozen for the POC**. Every downstream component targets it.
 
 - `explore` — encourage options and constraints, facilitator emphasizes breadth
 - `narrow` — collapse duplicates, force tradeoff clarity, facilitator asks focusing questions
-- `decide` — produce candidate wording, expose final blockers, gated on unresolved-difference count
-- `draft_adr` — focus shifts to the ADR editor; facilitator writes section drafts on request
+- `decide` — produce candidate wording, expose final blockers, and attach explicit dissent where needed
+- `draft_adr` — focus shifts to the ADR editor; facilitator writes section drafts on request. Entry is blocked while any `unresolved_difference` remains without a linked dissent record
 
-Humans switch modes. The facilitator can recommend a mode switch but cannot force one.
+Normal path: `explore` -> `narrow` -> `decide` -> `draft_adr`. Humans switch modes. The facilitator can recommend a mode switch but cannot force one. A room may move backward if new blockers appear.
 
 ### 12.4 Live ownership model
 
@@ -371,17 +375,21 @@ The ADR is the durable boundary between live reasoning and implementation. It ma
 
 ### 15.4 Approval rules
 
-- Only humans approve.
+- Room creation defines a fixed **decision-owner set** of 1-3 humans.
+- Only decision owners approve.
+- Contributors and observers never block approval unless explicitly promoted into the decision-owner set by the room owner.
+- Changes to the decision-owner set are audited and should happen before `in_review`; changing it after review starts requires moving the ADR back to `draft`.
+- Approval requires unanimous approval from the current decision-owner set.
 - Approval requires all 12 sections non-empty.
-- Approval records snapshot of alignment state at that moment (for audit).
+- Approval records snapshot of alignment state and the active decision-owner set at that moment (for audit).
 
 ### 15.5 Disagreement handling
 
 This is a first-class flow, not an edge case.
 
-- Entry into `decide` mode is **blocked** while any `unresolved_difference` node exists.
-- The room can resolve by: converting to `agreement`, or explicitly recording dissent.
-- Dissent flow: named dissenting participant + short position statement → appended to ADR as a "Dissent" sub-section of "Consequences".
+- `Decide` mode may contain unresolved differences; `draft_adr` and approval are blocked while any `unresolved_difference` lacks a resolution path.
+- The room can clear a blocker by: converting it to `agreement`, or explicitly recording dissent linked to the specific `unresolved_difference`.
+- Dissent flow: named dissenting participant + source unresolved node + short position statement → appended to ADR as a "Dissent" sub-section of "Consequences" and marked as handled for gating purposes.
 - Approval with recorded dissent transitions to `approved` with sub-state `dissent_recorded`.
 
 This matters because the product is supposed to *handle* disagreement, not assume it away.
@@ -390,7 +398,7 @@ This matters because the product is supposed to *handle* disagreement, not assum
 
 ### 16.1 Generation
 
-One-shot, template-driven, LLM-filled. Triggered once on ADR approval; can be regenerated on explicit request.
+One-shot, template-driven, LLM-filled. Available once the ADR is approved. A human triggers generation; it never runs automatically. It can be regenerated on explicit request.
 
 ### 16.2 Fixed plan template
 
@@ -398,10 +406,11 @@ Every plan has exactly these sections:
 
 1. **Summary** — 3–5 sentences on what is being built and why
 2. **Workstreams** — named, owner-suggested, sized S/M/L, with dependencies
-3. **Dependencies** — explicit cross-workstream and external dependencies
-4. **Open implementation questions** — carried forward from alignment state
-5. **Pattern references** — which patterns inform which workstreams
-6. **Risks** — implementation-specific risks distinct from decision-level risks
+3. **Sequence and dependencies** — explicit cross-workstream order, external dependencies, and critical path
+4. **Deliverables and acceptance checks** — what "done" means for each workstream
+5. **Open implementation questions** — carried forward from alignment state
+6. **Pattern references** — which patterns inform which workstreams
+7. **Risks and rollout notes** — implementation-specific risks, migration notes, and rollout cautions distinct from decision-level risks
 
 ### 16.3 Workstream granularity
 
@@ -413,16 +422,20 @@ Every plan has exactly these sections:
   suggested_owner,          // human id
   size,                     // 'S' | 'M' | 'L'
   depends_on[],             // other workstream ids
+  deliverables[],
+  acceptance_checks[],
+  first_step,
+  rollout_notes?,
   open_questions[],
   pattern_refs[]
 }
 ```
 
-This granularity is deliberate: finer becomes project management, coarser stops being useful. Tickets are created downstream by the owning human, not by this tool.
+This granularity is deliberate: finer becomes project management, coarser stops being useful. Tickets are created downstream by the owning human, not by this tool. The plan must still be specific enough that a team can start execution without reopening the architecture debate.
 
 ### 16.4 Ownership and claims
 
-Each workstream is claimable. Same lock semantics as ADR sections (§12.4). Handoff is gated on every workstream having an owner.
+Each workstream is claimable. Same lock semantics as ADR sections (§12.4). Plan approval and handoff are gated on every workstream having an owner, at least one deliverable, and at least one acceptance check.
 
 ### 16.5 Handoff package
 
@@ -457,25 +470,32 @@ Every derived entity (`agent_delta`, `facilitator_update`, `alignment_node`) car
 
 ```
 room.created
+room.brief.updated                { brief_fields, changed_by }
+room.decision_owners.updated      { decision_owner_ids[], changed_by }
 room.mode_changed                 { mode: 'explore'|'narrow'|'decide'|'draft_adr' }
 participant.joined
 participant.left
 human.utterance.created           { text, participant_id }
 agent.delta.submitted             { delta_type, payload, source_utterance_id }
+alignment.correction.submitted    { node_id, proposed_type?, proposed_text?, source_event_ids[] }
 alignment.node.updated            { op, node }
 pattern.suggested                 { pattern_id, justification, source_event_ids[] }
 facilitator.update.published      { ...§13.4 contract }
 facilitator.update.delayed        { reason }
 facilitator.correction            { rejected_update_id, reason }
+adr.section.claimed               { section, claim_id, ttl_ms }
+adr.section.released              { section, reason: 'manual'|'timeout' }
+adr.section.overlap_warning       { section, attempted_by }
 adr.section.updated               { section, diff, claim_id }
 adr.submitted_for_review
-adr.approved                      { approver_ids[], alignment_snapshot_id }
-adr.dissent_recorded              { dissenter_id, text }
+adr.approved                      { approver_ids[], decision_owner_ids[], alignment_snapshot_id }
+adr.dissent_recorded              { dissenter_id, source_node_id, text }
+plan.generated                    { plan_id, adr_id }
 plan.updated                      { diff }
 plan_item.claimed                 { item_id, claim_id, ttl_ms }
 plan_item.released                { item_id, reason: 'manual'|'timeout' }
 plan_item.overlap_warning         { item_id, attempted_by }
-plan.approved
+plan.approved                     { approver_ids[] }
 implementation.package.generated  { package_id }
 ```
 
@@ -515,9 +535,12 @@ Rationale: the agent integration protocol is a multi-week project. If we do it b
 
 ## 20. Permissions and Governance
 
-- Room owners invite and start decision mode
+- Room owners create the decision brief, nominate the initial decision-owner set, invite participants, and start decision mode
 - Participants contribute; (v2) attach their own agents
-- **Only humans** approve ADRs, approve plans, trigger handoff, promote patterns
+- **Only human decision owners** approve ADRs and plans
+- Observers can read/comment but never claim sections or block approval
+- Changes to the decision-owner set are visible to the room and fully audited
+- Only humans trigger handoff and promote patterns
 - Ownership claims are visible to all room participants
 - Full audit log: who said what, which agent produced which delta, why a facilitator update published, which patterns surfaced, who approved
 
@@ -527,10 +550,13 @@ Rationale: the agent integration protocol is a multi-week project. If we do it b
 POST /api/workspaces
 POST /api/rooms
 GET  /api/rooms/:id
+PATCH /api/rooms/:id/brief
 POST /api/rooms/:id/join
+POST /api/rooms/:id/decision-owners       { decision_owner_ids[] }
 POST /api/rooms/:id/utterances
 POST /api/rooms/:id/mode                  { mode }
 GET  /api/rooms/:id/alignment
+POST /api/rooms/:id/alignment/corrections { node_id, proposed_type?, proposed_text? }
 GET  /api/rooms/:id/patterns
 POST /api/rooms/:id/facilitator/synthesize
 POST /api/rooms/:id/facilitator/reject    { update_id, reason }
@@ -674,16 +700,24 @@ Deferred. See §19.
 - UI: ADR approval flow, plan approval flow, ownership overlap warnings
 
 ### Manual (scripted scenarios)
-- **S1:** two humans, one disagrees on an option → `decide` is blocked → dissent flow → approval with `dissent_recorded`
+- **S1:** two humans, one disagrees on an option → room enters `decide` mode → `draft_adr` is blocked until the room records dissent → approval with `dissent_recorded`
 - **S2:** three humans, scripted concurrent edits on the same ADR section → overlap warning blocks second editor
 - **S3:** noisy 10-minute brainstorm → raw:shared ratio measured ≥ 10:1 (§3 goal 3)
 - **S4:** reconnect mid-session → client replays event log and restores state
-- **S5:** baseline head-to-head (§3 goal 7) — 30-min session in the tool vs 60-min Google-Doc+Claude session on the same prompt, 3 blind reviewers
+- **S5:** baseline head-to-head (§3 goal 7) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers
+
+### Baseline evaluation protocol
+- The workspace condition and baseline condition use the same briefing pack, participant roster size, and facilitator role.
+- The baseline is: shared Google Doc + private Claude/ChatGPT use + live meeting.
+- Reviewers only see the exported ADR + plan, anonymized and randomized.
+- Each reviewer scores 1-5 on: problem framing, decision clarity, tradeoff explicitness, implementation specificity, and owner clarity.
+- Success: the workspace wins on median total score for at least 2 of 3 reviewers.
 
 ## 26. Success Metrics
 
 Primary:
 - **Goal 7 (baseline head-to-head).** If this fails, the POC failed.
+- Baseline rubric score by dimension
 - Time from room start to ADR approval
 - Time from ADR approval to plan approval
 - Raw-to-shared event ratio
@@ -725,7 +759,7 @@ These were "open questions" in v0.1. They are tunable parameters now.
 - **Q1. Private agent detail in live session.** Dial: perspective-pane verbosity slider (per-user). Default: medium. Test both extremes in scripted sessions.
 - **Q2. Alignment taxonomy.** Frozen at 7 types for POC (§12.1). Revisit after 5 sessions.
 - **Q3. Facilitator cadence.** Hybrid: 10s window OR 50-event backlog OR manual. §13.2. Tunable via `FACILITATOR_WINDOW_MS` env var.
-- **Q4. Approval model for 2–5 humans.** All-participant approval required. Simpler than quorum for POC; revisit if sessions get larger.
+- **Q4. Approval model for 2–5 humans.** Fixed decision-owner set declared at room creation. Default: unanimous approval from that set. Revisit if rooms get larger.
 - **Q5. Pattern ranking.** Tag + substring only (§14). Embeddings + ranking are v2.
 - **Q6. Plan granularity.** Workstreams, not tickets (§16.3). If users complain it's too coarse, add a "break down" action that expands one workstream into sub-items.
 
