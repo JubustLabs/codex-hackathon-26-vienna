@@ -2,10 +2,10 @@
 
 ## POC Implementation Plan
 
-Status: Draft 0.2
+Status: Draft 0.3
 Last updated: 2026-04-18
 Audience: Product, engineering, design
-Primary goal: prove that a text-first real-time workspace — with one facilitator voice, a frozen alignment taxonomy, and live section-level ownership — lets 2-5 humans reach shared understanding on the problem, decision, tradeoffs, and next steps quickly enough to produce a high-quality ADR and concrete implementation plan faster than a shared doc plus ad hoc AI.
+Primary goal: prove that a text-first real-time workspace — with private human-agent loops, one shared orchestrator, a frozen alignment taxonomy, and live section-level ownership — lets 2-5 humans reach shared understanding on the problem, decision, tradeoffs, and next steps quickly enough to produce a high-quality ADR and concrete implementation plan faster than a shared doc plus ad hoc AI.
 
 For the POC, "alignment" means participants can independently restate the problem, chosen option, key tradeoffs, and immediate workstreams closely enough that the room does not need to reopen the decision before execution starts. It does not require unanimous enthusiasm, but it does require shared clarity.
 
@@ -15,7 +15,7 @@ For the POC, "alignment" means participants can independently restate the proble
 
 **Agreement before generation.** Modern tooling made code, diagrams, and long-form reasoning cheap to produce. What is still slow and painful is agreeing on *what* to build, *which* tradeoffs to accept, and *how* to sequence the work. Teams burn days across fragmented meetings, side-channels, and private AI sessions, each rediscovering the same constraints.
 
-This product is a real-time alignment workspace. It is **not** an agent debate arena. It is **not** a chat tool with AI decorations. It is a single-room workspace where humans stay the decision-makers and a curated AI layer — one facilitator voice, not many competing agents — denoises the room, surfaces common ground, and compiles the outputs the team actually needs:
+This product is a real-time alignment workspace. It is **not** an unbounded agent debate arena. It is **not** a chat tool with AI decorations. It is a single-room workspace where humans stay the decision-makers, each participant may work through a private local agent, and one shared orchestrator denoises the room, surfaces common ground, redirects ideas to the right people, challenges weak proposals, and compiles the outputs the team actually needs:
 
 - a human-approved **architecture decision record** (ADR)
 - a concrete **implementation plan** derived from the approved ADR
@@ -25,24 +25,25 @@ The room starts with two explicit context layers before anyone drafts anything: 
 
 Closest mental model: a collaborative ADR workspace with Google-Docs-like shared presence and fast iteration, but **not** free-form simultaneous paragraph editing. Shared writing is coordinated through visible section ownership because silent overlap is exactly the failure mode this product is trying to remove.
 
-The counter-design we are explicitly avoiding is *N agents talking over each other in a shared timeline while humans scroll past*. Each human may privately attach their own agents, but only typed deltas cross into the shared room, and only one synthesized facilitator voice speaks to the group.
+The counter-design we are explicitly avoiding is *N agents talking over each other in a shared timeline while humans scroll past*. Each human may privately attach their own agents, but only typed deltas cross into the shared room, and only one synthesized orchestrator voice speaks to the group. The orchestrator is stronger than a summarizer: it compares what A/B/C are proposing, detects conflicts and hidden agreement, routes relevant context across participants, and tells the room when a proposal is weak against guardrails, domain needs, or existing evidence.
 
-Follow-on iterations can expand into deeper agent connectivity, richer pattern memory, and execution automation. The first thing we must prove is **human alignment**, not agent orchestration.
+The first thing we must prove is **human alignment with mediated agent support**: private human-agent ping-pong locally, orchestrated convergence publicly.
 
 ## 2. Product Thesis
 
 - Generation is cheap; agreement is not.
-- Shared chat amplifies noise; a structured AI layer can reduce it.
+- Shared chat amplifies noise; a structured orchestration layer can reduce it.
 - ADRs are the right boundary between reasoning and implementation — decisions become explicit, auditable, revisitable.
 - A concrete implementation plan tied to the ADR is the artifact teams want to leave the room with.
 - Live ownership — who is taking which section, in real time — prevents duplicate work better than after-the-fact coordination.
+- Private agents are useful only if the shared orchestrator can merge, compare, and route their outputs without turning the room into noise.
 
 ## 3. POC Goals
 
 The first draft must validate, with at least one recorded 3-person session per claim:
 
 1. 2-5 humans can collaborate in one live room and reach an ADR approval in **under 45 minutes** on a scoped topic.
-2. Shared facilitator updates arrive at **no more than 1 per 10 seconds** under typical load.
+2. Shared orchestrator updates arrive at **no more than 1 per 10 seconds** under typical load.
 3. The raw-event to shared-event ratio is **at least 10:1** — denoising actually denoises.
 4. Immediately after approval, at least **80% of participants** pass the post-session alignment check (§25): they can independently restate the problem, decision, key tradeoff, first implementation workstream, and remaining open question / owner with **4 of 5 answers** materially matching the approved ADR+plan.
 5. The final ADR has **all 12 sections (§15.2) populated** before approval, and every section has been explicitly human-reviewed before approval.
@@ -78,7 +79,7 @@ Agents clarify, summarize, compare, and draft. Humans approve the final ADR and 
 ### 5.3 Real-time does not mean noisy
 Raw input and private agent output may be continuous, but shared publication must be filtered, deduplicated, and synthesized.
 
-### 5.4 One facilitator voice in the shared room
+### 5.4 One orchestrator voice in the shared room
 The shared room exposes one high-signal AI layer, not many competing agent voices.
 
 ### 5.5 ADR is the decision boundary
@@ -91,7 +92,7 @@ Participants see in real time who owns which section; the system enforces single
 A handful of hand-curated patterns retrieved by tags. Richness is deferred.
 
 ### 5.8 Central control plane, distributed agents
-Shared truth, permissions, events, and decisions live in a central backend. Attached agents can connect from elsewhere; that protocol is a v2 concern.
+Shared truth, permissions, events, and decisions live in a central backend. Attached agents can connect from elsewhere in the POC, but their outputs reach the room only through typed deltas and orchestrator mediation.
 
 ### 5.9 Alignment is shared understanding, not unanimous enthusiasm
 Formal approval belongs to a named decision-owner set, but the product is optimizing for room-level clarity. Participants should leave able to restate the same problem, decision, tradeoffs, and next steps even when dissent is recorded.
@@ -112,8 +113,8 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 
 - **Decision owners.** 1-3 humans named when the room is created. They are accountable for the final decision and form the formal approval set for the ADR and plan.
 - **Contributors.** Humans who participate in the room, add constraints/options/questions/tradeoffs, and may edit claimed sections. They do not formally approve the ADR or plan, but disagreements they raise remain visible until resolved, recorded as dissent, or explicitly marked non-blocking.
-- **Attached agents (v2).** Private, human-owned helpers. Contribute only through typed deltas.
-- **Facilitator agent.** One shared system-owned voice that synthesizes the room.
+- **Attached agents.** Private, human-owned helpers. They help their human think locally, then submit typed deltas into the merge layer.
+- **Shared orchestrator.** One system-owned voice that synthesizes the room, compares participant proposals, routes insights across humans, and challenges low-quality reasoning against domain constraints, guardrails, and evidence.
 - **Observers.** Read/comment only. Never part of the approval set.
 
 ## 7. End-to-End User Journey
@@ -124,23 +125,25 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 3. The pattern library pre-fetches matches by topic tags.
 4. The component catalog refreshes from workspace evidence sources and surfaces likely reusable components for the topic.
 5. Participants can review the active guardrails before discussion starts.
-6. (v2) Participants may attach agents.
+6. Participants may attach agents.
 
 ### 7.2 During the session
 1. Humans type ideas, constraints, tradeoffs.
 2. The classifier (Haiku) tags each utterance with candidate alignment-node deltas.
-3. The facilitator (Sonnet) runs every 10s over the last window + current alignment snapshot, emitting a single `facilitator_update`.
-4. The alignment board updates with: goals, constraints, options, tradeoffs, risks, open questions, agreements, unresolved differences.
-5. Pattern panel surfaces matches with a short "why this" justification.
-6. Component catalog surfaces likely reusable services/modules/packages with evidence paths and confidence.
-7. Guardrail panel shows hard constraints, soft preferences, and any active option conflicts.
-8. The facilitator drafts neutral wording when agreement narrows and highlights when an option violates a hard guardrail or ignores a likely reusable component.
+3. Participant agents and the classifier turn local reasoning into typed deltas.
+4. The orchestrator (Sonnet) runs every 10s over the last window + current alignment snapshot, emitting a single `orchestrator_update`.
+5. The alignment board updates with: goals, constraints, options, tradeoffs, risks, open questions, agreements, unresolved differences.
+6. The orchestrator highlights where one person's proposal is relevant to another person's blocker or domain concern.
+7. Pattern panel surfaces matches with a short "why this" justification.
+8. Component catalog surfaces likely reusable services/modules/packages with evidence paths and confidence.
+9. Guardrail panel shows hard constraints, soft preferences, and any active option conflicts.
+10. The orchestrator drafts neutral wording when agreement narrows, flags weak ideas, and highlights when an option violates a hard guardrail, ignores a likely reusable component, or conflicts with a domain requirement another participant raised.
 
 ### 7.3 Decision point
 1. The room switches to `decide` mode once the option set has been narrowed and the team is ready to make the call.
-2. `Decide` mode is where the facilitator surfaces final blockers. Promotion from `decide` to `draft_adr` is blocked while any `unresolved_difference` exists without either a resolution, a linked dissent record, or an explicit `non_blocking` mark from the participant who raised it (§15.5).
+2. `Decide` mode is where the orchestrator surfaces final blockers, strongest competing proposals, and any unresolved domain-vs-tech mismatches. Promotion from `decide` to `draft_adr` is blocked while any `unresolved_difference` exists without either a resolution, a linked dissent record, or an explicit `non_blocking` mark from the participant who raised it (§15.5).
 3. The ADR draft becomes the primary artifact.
-4. Humans claim sections, edit, and request facilitator drafts as needed.
+4. Humans claim sections, edit, and request orchestrator drafts as needed.
 5. Approval is recorded with provenance: who approved, at what timestamp, based on which alignment snapshot.
 
 ### 7.4 After the session
@@ -151,7 +154,7 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 
 ## 8. Core Product Surfaces
 
-1. **Room view** — live discussion + facilitator stream
+1. **Room view** — live discussion + orchestrator stream
 2. **Alignment board** — live structured panel (the 8 node types, §12.1)
 3. **Pattern panel** — seeded patterns surfaced by tag match
 4. **Component catalog panel** — autodiscovered reusable components with evidence and human confirmation state
@@ -159,14 +162,13 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 6. **Ownership board** — live claims and overlap warnings
 7. **ADR editor** — structured, section-locked
 8. **Implementation plan editor** — workstream-level, section-locked
-
-The per-human perspective pane for attached agents is a v2 surface and is intentionally absent from the POC UI, even though the protocol stub exists (§19).
+9. **Perspective pane** — per-human private thread showing local agent suggestions, draft deltas, and items the orchestrator routed to that participant
 
 ## 9. POC Scope
 
-**In:** text-first collaboration, one workspace, one live room type, one facilitator stream, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, ADR revision history, typed subdecision tracking, implementation plan generation + approval, live ownership, audit log.
+**In:** text-first collaboration, one workspace, one live room type, one shared orchestrator stream, per-human perspective panes, attached personal agents contributing typed deltas, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, ADR revision history, typed subdecision tracking, implementation plan generation + approval, live ownership, audit log.
 
-**Out:** voice, video, multiple room archetypes, multi-workspace federation, external IdPs, analytics dashboards, autonomous execution, the full attached-agent protocol and any participant-facing perspective pane (kept as a stub only, §19), and deep whole-codebase semantic discovery beyond evidence-backed POC heuristics.
+**Out:** voice, video, multiple room archetypes, multi-workspace federation, external IdPs, analytics dashboards, autonomous execution, unrestricted public agent chatter, and deep whole-codebase semantic discovery beyond evidence-backed POC heuristics.
 
 ---
 
@@ -183,7 +185,8 @@ React Client(s)
         -> Guardrail Service (workspace defaults + room overrides)
         -> Component Catalog Service (manifest/repo scan + confirmation state)
         -> Classifier Worker (per-utterance, Haiku)
-        -> Facilitator Worker (windowed, Sonnet)
+        -> Agent Gateway (per-human private agent sessions)
+        -> Orchestrator Worker (windowed, Sonnet)
         -> ADR Compiler (on-demand)
         -> Plan Generator (on-demand)
         -> Pattern Service (tag-match over seeded JSON)
@@ -207,7 +210,7 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 - A section (ADR section, plan workstream) has at most one active claimant.
 - Claim TTL: 60s of inactivity auto-releases.
 - Server rejects writes to an unclaimed section. Frontend disables the editor until claim is held.
-- Alignment nodes are facilitator-written; humans correct via typed `alignment_correction` deltas rather than direct edit.
+- Alignment nodes are orchestrator-written; humans correct via typed `alignment_correction` deltas rather than direct edit.
 - ADR and plan prose do **not** use character-level merge or CRDT conflict resolution in the POC.
 - Typed subdecisions use optimistic concurrency with `base_revision_id`.
 - The server may auto-merge subdecision writes only when they touch disjoint fields or additive collections.
@@ -221,31 +224,34 @@ Room lifecycle, presence, message fanout, claim bookkeeping, permission checks, 
 ### 11.2 Classifier worker
 Runs per utterance. Small Haiku prompt: given utterance + last alignment snapshot, emit zero or more typed deltas (see §13.1) with confidence and a `novelty_hash` over the normalized text. Output is pushed to the working layer, not published to the shared layer.
 
-Cost profile: ~500 input + 200 output tokens per call. Fires only on human utterances (not facilitator output, not claim events).
+Cost profile: ~500 input + 200 output tokens per call. Fires only on human utterances (not orchestrator output, not claim events).
 
-### 11.3 Facilitator worker
-The product's center of gravity. See §13 for the full spec. One call every 10s over the last window, or on manual "synthesize now". Emits exactly one `facilitator_update` event.
+### 11.3 Agent gateway
+Maintains per-human private agent sessions, auth scopes, and typed-delta submission. Agent output never lands in the shared room directly; it enters the working layer tagged with owner, audience, and confidence.
 
-### 11.4 ADR compiler
+### 11.4 Orchestrator worker
+The product's center of gravity. See §13 for the full spec. One call every 10s over the last window, or on manual "synthesize now". Emits exactly one `orchestrator_update` event plus optional targeted routing suggestions for specific participants.
+
+### 11.5 ADR compiler
 Template-driven, LLM-filled. Input: current alignment snapshot + ADR state + current subdecision state + active guardrails + relevant confirmed components. Output: section-level diffs keyed by §15.2 headers. Called on demand from the UI ("regenerate section" or "draft all"), not on every tick.
 
-### 11.5 Plan generator
+### 11.6 Plan generator
 One-shot from an approved ADR revision. Template in §16. Emits a draft implementation plan with workstream-level granularity, reuse suggestions, and any required guardrail exception slots. Never runs automatically — humans trigger after ADR approval.
 
-### 11.6 Pattern service
+### 11.7 Pattern service
 Reads `data/patterns.json` at boot. Tag-match + substring match over problem statement. Returns top 5 with a one-line "why this matches" from Haiku. No embeddings, no ranking, no promotion workflow in the POC.
 
-### 11.7 Guardrail service
-Stores workspace-level defaults and room-level overrides. For the demo, it can seed from `data/guardrails.json` and persist active values in SQLite. Exposes hard constraints, soft preferences, and reuse policy to the facilitator, ADR compiler, and plan generator.
+### 11.8 Guardrail service
+Stores workspace-level defaults and room-level overrides. For the demo, it can seed from `data/guardrails.json` and persist active values in SQLite. Exposes hard constraints, soft preferences, and reuse policy to the orchestrator, ADR compiler, and plan generator.
 
-### 11.8 Component catalog service
+### 11.9 Component catalog service
 Builds a workspace-local catalog of likely reusable components from evidence-first sources: `Cargo.toml`, workspace manifests, `package.json`, `pyproject.toml`, lockfiles, infra manifests, conventional repo paths (`crates/`, `packages/`, `services/`), and existing ADR Markdown. Produces candidate entries with file-path evidence and confidence. Humans can confirm or ignore entries; pure LLM-only discovery is not sufficient for POC truth.
 
-### 11.9 Revision service
+### 11.10 Revision service
 Materializes immutable `adr_revision`, `subdecision_revision`, and `plan_revision` snapshots from the event stream. Creates revisions on manual checkpoint, `submit_for_review`, approval, and conflict resolution. Supports replay, diffing, and approval provenance without making mutable draft rows the source of truth.
 
-### 11.10 Agent gateway stub (v2)
-A single registered endpoint and typed-delta ingest path. Present for schema completeness so v2 can ship without breaking changes. No capability negotiation, no remote runtimes in the POC.
+### 11.11 Routing and merge service
+Consumes human utterances, classifier deltas, and agent deltas; clusters them by topic and audience; and prepares merge candidates for the orchestrator. This is where the system decides that A's proposal is relevant to B's blocker, or that C's idea conflicts with a domain rule already captured elsewhere.
 
 ## 12. Realtime Collaboration Model
 
@@ -270,9 +276,9 @@ Every alignment node has:
 {
   id, type, text,
   source_utterance_ids[], source_delta_ids[],
-  confidence,            // facilitator's confidence, 0–1
+  confidence,            // orchestrator's confidence, 0–1
   supersedes_id?,        // if this replaces an older node
-  created_by,            // 'facilitator' or participant id
+  created_by,            // 'orchestrator' or participant id
   last_touched_at
 }
 ```
@@ -281,18 +287,18 @@ This schema is **frozen for the POC**. Every downstream component targets it.
 
 ### 12.2 Three-layer signal model
 
-- **Raw layer.** Every utterance, every private agent output, every classifier delta.
-- **Working layer.** Deduplicated deltas, clustered by novelty hash, importance-scored. Internal — not shown to humans directly.
-- **Shared layer.** Only facilitator updates, alignment snapshots, pattern suggestions, component suggestions, guardrail alerts, ADR/plan diffs, ownership events.
+- **Private layer.** Each human and their attached agent iterate locally. Private agent output stays visible only to the owning human unless promoted as typed deltas.
+- **Working merge layer.** Human utterances, classifier deltas, and promoted agent deltas are deduplicated, clustered by novelty hash, audience-scored, and prepared for orchestrator reasoning. Internal — not shown directly.
+- **Shared layer.** Only orchestrator updates, alignment snapshots, pattern suggestions, component suggestions, guardrail alerts, ADR/plan diffs, ownership events.
 
 ### 12.3 Room modes
 
-- `explore` — encourage options and constraints, facilitator emphasizes breadth
-- `narrow` — collapse duplicates, force tradeoff clarity, facilitator asks focusing questions
+- `explore` — encourage options and constraints, orchestrator emphasizes breadth and cross-pollination
+- `narrow` — collapse duplicates, force tradeoff clarity, orchestrator routes conflicts to the right participants
 - `decide` — produce candidate wording, expose final blockers, and attach explicit dissent where needed
-- `draft_adr` — focus shifts to the ADR editor; facilitator writes section drafts on request. Entry is blocked while any `unresolved_difference` remains without a linked dissent record or explicit `non_blocking` mark
+- `draft_adr` — focus shifts to the ADR editor; orchestrator writes section drafts on request. Entry is blocked while any `unresolved_difference` remains without a linked dissent record or explicit `non_blocking` mark
 
-Normal path: `explore` -> `narrow` -> `decide` -> `draft_adr`. Humans switch modes. The facilitator can recommend a mode switch but cannot force one. A room may move backward if new blockers appear.
+Normal path: `explore` -> `narrow` -> `decide` -> `draft_adr`. Humans switch modes. The orchestrator can recommend a mode switch but cannot force one. A room may move backward if new blockers appear.
 
 ### 12.4 Live ownership model
 
@@ -303,9 +309,9 @@ Ownership is a **server-enforced single-writer lock** per ADR section and per pl
 - last commit timestamp
 - overlap warnings when a human starts editing a claimed section (blocked with a nudge, not silent)
 
-Attached agents (v2) can only act under their owning human's active claim scope.
+Attached agents can only act under their owning human's active claim scope.
 
-## 13. Facilitator Engine Spec
+## 13. Orchestrator Engine Spec
 
 This is the single most important component. Getting it right beats everything else.
 
@@ -328,7 +334,7 @@ This is the single most important component. Getting it right beats everything e
 | `pattern_match` | pattern_id, justification |
 | `alignment_correction` | pointer to node id, proposed text/type change |
 
-### 13.2 Facilitator trigger
+### 13.2 Orchestrator trigger
 
 Runs when **any** of:
 - 10 seconds elapsed since last run AND ≥ 1 new high-signal delta
@@ -337,7 +343,7 @@ Runs when **any** of:
 
 Skips (no-op) if: zero novelty since last run (measured by novelty hashes).
 
-### 13.3 Facilitator input
+### 13.3 Orchestrator input
 
 - Last N=50 raw events (utterances, deltas, claim events) from the window
 - Current alignment snapshot (all nodes)
@@ -346,41 +352,44 @@ Skips (no-op) if: zero novelty since last run (measured by novelty hashes).
 - Top matched confirmed components
 - Current ADR draft headers only (not full body)
 
-### 13.4 Facilitator output contract
+### 13.4 Orchestrator output contract
 
 Exactly one event:
 
 ```json
 {
-  "type": "facilitator.update.published",
+  "type": "orchestrator.update.published",
   "synthesis": "short paragraph, <= 80 words",
   "common_ground_changes": [{ "node_id": "...", "op": "add|update" }],
   "blocker_changes": [{ "node_id": "...", "note": "..." }],
   "alignment_node_deltas": [{ "op": "add|update|supersede", "node": { ... } }],
+  "targeted_feedback": [{ "participant_id": "usr_b", "message": "A's proposal may address your blocker on onboarding state." }],
+  "routed_insights": [{ "from_actor_id": "usr_a", "to_actor_id": "usr_b", "reason": "relevant_domain_constraint" }],
   "suggested_next_move": "e.g. 'narrow to 2 options' | 'draft decision on X' | null",
   "source_event_ids": ["evt_..."],
-  "supersedes": "facil_update_prev_id"
+  "supersedes": "orch_update_prev_id"
 }
 ```
 
-Every synthesis carries pointers back to the raw events it drew from. This is how audit and "why did the facilitator say that?" work.
+Every synthesis carries pointers back to the raw events it drew from. This is how audit and "why did the orchestrator say that?" work.
 
 ### 13.5 Failure modes and mitigations
 
-- **Model timeout / 5xx.** Publish a `facilitator.update.delayed` marker. Do not retry silently. Skip one window.
-- **Hallucinated agreement.** Every `agreement` node shows a "Reject" control. Rejecting demotes the node to `unresolved_difference` and records a `facilitator_correction` event that the next call sees.
-- **Runaway cost.** Cap at 8 facilitator calls per minute per room. Hard stop.
+- **Model timeout / 5xx.** Publish an `orchestrator.update.delayed` marker. Do not retry silently. Skip one window.
+- **Hallucinated agreement.** Every `agreement` node shows a "Reject" control. Rejecting demotes the node to `unresolved_difference` and records an `orchestrator.correction` event that the next call sees.
+- **Bad routing.** Humans can mark targeted feedback as `not_relevant`; repeated misses lower routing confidence for that participant pair.
+- **Runaway cost.** Cap at 8 orchestrator calls per minute per room. Hard stop.
 - **Low-novelty loops.** Novelty-hash skip (§13.2) prevents re-synthesis of identical state.
 
 ### 13.6 Latency budget
 
 - Classifier (Haiku): p50 ≤ 800ms, p95 ≤ 2s
-- Facilitator (Sonnet): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Orchestrator (Sonnet): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
 - Classifier (OpenAI `gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): target the same p50 ≤ 800ms, p95 ≤ 2s budget
-- Facilitator (OpenAI `gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): target the same p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Orchestrator (OpenAI `gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): target the same p50 ≤ 3s, p95 ≤ 6s from batch close to publish
 - WebSocket fanout: ≤ 100ms
 
-These are product latency targets, not vendor guarantees. OpenAI model selection should prefer the smallest model that meets facilitator-quality evals and the routing guidance in §23.1.
+These are product latency targets, not vendor guarantees. OpenAI model selection should prefer the smallest model that meets orchestrator-quality evals and the routing guidance in §23.1.
 
 ### 13.7 Denoising controls
 
@@ -429,7 +438,7 @@ Guardrails are explicit inputs that shape the decision and the generated artifac
 
 - **Semantics:** hard guardrails act like formal constraints; soft guardrails act like strong defaults that can be overridden with justification.
 - **Overrides:** a room may add scoped overrides, but they are audited and shown to all participants.
-- **Enforcement:** the facilitator flags conflicts during discussion; ADR and plan approval are blocked on unresolved hard-guardrail conflicts unless an explicit exception is recorded.
+- **Enforcement:** the orchestrator flags conflicts during discussion; ADR and plan approval are blocked on unresolved hard-guardrail conflicts unless an explicit exception is recorded.
 
 ### 14.3 Component catalog
 
@@ -475,7 +484,7 @@ The ADR is the durable boundary between live reasoning and implementation. It ma
 - Changes to the decision-owner set are audited and should happen before `in_review`; changing it after review starts requires moving the ADR back to `draft`.
 - Approval requires unanimous approval from the current decision-owner set.
 - Approval requires all 12 sections non-empty.
-- Approval requires every section to have been explicitly human-reviewed, even if its initial text came from the facilitator.
+- Approval requires every section to have been explicitly human-reviewed, even if its initial text came from the orchestrator.
 - Approval is blocked if the chosen option violates an active hard guardrail without a recorded exception.
 - Approval records snapshot of alignment state and the active decision-owner set at that moment (for audit).
 
@@ -629,7 +638,7 @@ The implementation plan follows the same draft + immutable revision pattern as t
 | `alignment_node` | Goal / constraint / option / tradeoff / risk / question / agreement / unresolved_difference |
 | `component_catalog_entry` | Autodiscovered or confirmed reusable module/service/package |
 | `component_evidence` | File-path or document evidence for a component entry |
-| `facilitator_update` | Shared synthesized update. `source_event_ids[]`, `supersedes?` |
+| `orchestrator_update` | Shared synthesized update. `source_event_ids[]`, `supersedes?` |
 | `pattern` | Seeded library entry |
 | `adr` | Formal decision record, section-keyed |
 | `adr_revision` | Immutable whole-ADR snapshot used for review, approval, and diff |
@@ -645,7 +654,7 @@ The implementation plan follows the same draft + immutable revision pattern as t
 | `implementation_package` | Handoff bundle with approved ADR / plan revision pointers |
 | `event_log` | Append-only audit + replay stream |
 
-Every derived entity (`agent_delta`, `facilitator_update`, `alignment_node`) carries `source_event_ids[]` and optional `supersedes` so the three-layer signal flow is fully auditable and replayable.
+Every derived entity (`agent_delta`, `orchestrator_update`, `alignment_node`) carries `source_event_ids[]` and optional `supersedes` so the three-layer signal flow is fully auditable and replayable.
 
 ## 18. Realtime Event Model
 
@@ -664,15 +673,15 @@ room.mode_changed                 { mode: 'explore'|'narrow'|'decide'|'draft_adr
 participant.joined
 participant.left
 human.utterance.created           { text, participant_id }
-agent.delta.submitted             { delta_type, payload, source_utterance_id } // v2 stub only
+agent.delta.submitted             { delta_type, payload, source_utterance_id }
 alignment.correction.submitted    { node_id, proposed_type?, proposed_text?, source_event_ids[] }
 alignment.node.updated            { op, node }
 pattern.suggested                 { pattern_id, justification, source_event_ids[] }
 component.suggested               { component_id, justification, source_event_ids[] }
 guardrail.alerted                 { rule_key, severity, note, source_event_ids[] }
-facilitator.update.published      { ...§13.4 contract }
-facilitator.update.delayed        { reason }
-facilitator.correction            { rejected_update_id, reason }
+orchestrator.update.published     { ...§13.4 contract }
+orchestrator.update.delayed       { reason }
+orchestrator.correction           { rejected_update_id, reason }
 adr.section.claimed               { section, claim_id, ttl_ms }
 adr.section.released              { section, reason: 'manual'|'timeout' }
 adr.section.overlap_warning       { section, attempted_by }
@@ -719,31 +728,39 @@ implementation.package.generated  { package_id }
 
 All events carry `source_event_ids[]` and optional `supersedes` where applicable.
 
-## 19. Attached Agents (v2 stub)
+## 19. Attached Agents and Private Collaboration
 
-**POC ships a stub, not the full protocol.** The schema for `agent_runtime`, the WebSocket auth flow, and the `agent.delta.submitted` path exist so v2 can land without breaking changes. Everything else — capability negotiation, heartbeats, tool-permission boundaries, distributed runtimes, and any participant-facing perspective-pane UI — is deferred.
+**POC ships the minimal real protocol, not a stub.** Each participant may connect one private agent session. The product does not expose raw agent chatter in the shared room. Instead, agent output is visible in the participant's perspective pane, can be promoted as typed deltas, and is mediated by the orchestrator before affecting the shared room.
 
-Rationale: the agent integration protocol is a multi-week project. If we do it before the human alignment loop is proven, we spend the POC on the wrong problem.
+Rationale: the product concept is the ping-pong loop between human, private agent, and shared orchestrator. If that loop is missing, the POC proves the wrong thing.
 
-### 19.1 Privacy enforcement (when v2 ships)
+### 19.1 Privacy enforcement
 
 - Perspective-pane subscriptions are **per-user on the server**. The backend filters non-owner private deltas out before fanout. No client-side "hide" that relies on frontend trust.
-- Shared synthesis never includes raw private agent content — only novelty-gated deltas that cross into the working layer.
+- Shared synthesis never includes raw private agent content — only promoted typed deltas and orchestrator conclusions that reference them.
 - Attached agents can only act under their owning human's active claim.
+- Every promoted delta records human owner, agent id, and whether the human explicitly approved it before it entered the merge layer.
+
+### 19.2 Minimal POC protocol
+
+- agent runtime connects over WebSocket with scoped room + owner identity
+- agent may submit `agent.delta.submitted` events with typed payloads only
+- human can approve, edit, or discard agent suggestions before promotion
+- orchestrator may route relevant deltas to another participant, but never exposes the source participant's full private transcript
 
 ## 20. Permissions and Governance
 
 - Room owners create the decision brief, nominate the initial decision-owner set, invite participants, and start decision mode
 - Room owners can create scoped guardrail overrides for their room; those overrides are visible and audited
 - Workspace owners define default guardrails and can refresh / confirm the component catalog
-- Participants contribute; (v2) attach their own agents
+- Participants contribute and may attach their own agents
 - **Only human decision owners** approve ADRs and plans
 - Any participant may raise an unresolved difference; it must be resolved, recorded as dissent, or marked `non_blocking` before approval can proceed
 - Observers can read/comment but never claim sections or block approval
 - Changes to the decision-owner set are visible to the room and fully audited
 - Only humans trigger handoff and promote patterns
 - Ownership claims are visible to all room participants
-- Full audit log: who said what, which agent produced which delta, why a facilitator update published, which patterns surfaced, who approved
+- Full audit log: who said what, which agent produced which delta, why an orchestrator update published, which patterns surfaced, who approved
 
 ## 21. API Surface
 
@@ -766,8 +783,9 @@ POST /api/rooms/:id/mode                  { mode }
 GET  /api/rooms/:id/alignment
 POST /api/rooms/:id/alignment/corrections { node_id, proposed_type?, proposed_text? }
 GET  /api/rooms/:id/patterns
-POST /api/rooms/:id/facilitator/synthesize
-POST /api/rooms/:id/facilitator/reject    { update_id, reason }
+POST /api/rooms/:id/orchestrator/synthesize
+POST /api/rooms/:id/orchestrator/reject   { update_id, reason }
+POST /api/rooms/:id/perspectives/:participantId/promote-delta
 POST /api/rooms/:id/adr/sections/:section/claim
 POST /api/rooms/:id/adr/sections/:section/release
 POST /api/rooms/:id/adr/sections/:section/write  { diff }
@@ -794,7 +812,7 @@ GET  /api/rooms/:id/package
 WS   /api/realtime
 ```
 
-WebSocket carries both user events and (v2) agent-runtime events on the same channel with actor-typed envelopes.
+WebSocket carries both user events and agent-runtime events on the same channel with actor-typed envelopes.
 
 ## 22. Frontend Plan and Project Bootstrap
 
@@ -823,9 +841,9 @@ This plan assumes an empty-slate repo. Phase 0 bootstraps the alignment workspac
 
 ### 22.3 Panels inside a room
 
-Human discussion | Facilitator stream | Alignment board | Pattern suggestions | Component catalog | Guardrails | Ownership board | ADR draft pane | Implementation plan pane
+Human discussion | Orchestrator stream | Alignment board | Pattern suggestions | Component catalog | Guardrails | Ownership board | Perspective pane | ADR draft pane | Implementation plan pane
 
-The perspective pane remains v2-only and does not ship as a room panel in the POC.
+The perspective pane is a first-class POC panel. It shows private agent suggestions, promoted deltas, routed insights from the orchestrator, and pending items that need the participant's approval.
 
 The ADR draft pane should expose:
 
@@ -838,35 +856,35 @@ The ADR draft pane should expose:
 ### 23.1 Model routing
 
 - **Classifier per utterance:** Claude Haiku 4.5 — fast, cheap, small prompt
-- **Facilitator synthesis:** Claude Sonnet 4.6 — better instruction-following on structured output
+- **Orchestrator synthesis:** Claude Sonnet 4.6 — better instruction-following on structured output
 - **ADR section draft:** Claude Sonnet 4.6 — one-shot, on demand
 - **Plan generation:** Claude Sonnet 4.6 — one-shot, on an approved ADR revision
 
 OpenAI parity routing:
 
 - **Classifier per utterance:** `gpt-5.4-nano` first, `gpt-5-mini` as fallback when the nano path misses extraction quality; keep `reasoning.effort` at `none` or `minimal`
-- **Facilitator synthesis:** `gpt-5.4-mini` first for lower latency; escalate to `gpt-5.4` only if evals show materially better synthesis / blocker detection; start with `reasoning.effort: low`
+- **Orchestrator synthesis:** `gpt-5.4-mini` first for lower latency; escalate to `gpt-5.4` only if evals show materially better synthesis / blocker detection; start with `reasoning.effort: low`
 - **ADR section draft:** `gpt-5.4-mini` for fast drafts, `gpt-5.4` for higher-stakes sections such as `Decision`, `Tradeoffs`, and `Implementation guidance`
 - **Plan generation:** `gpt-5.4-mini` by default, `gpt-5.4` when the workstream breakdown is too generic at mini quality
 
 OpenAI docs currently position `gpt-5.4` as the starting point for complex reasoning/coding and `gpt-5.4-mini` / `gpt-5.4-nano` for lower-latency, lower-cost workloads. `gpt-5-mini` remains a viable low-latency fallback in this plan when the smallest path is too weak for classification quality.
 
-No routing to Opus in the POC. Opus can be A/B'd later for facilitator only.
+No routing to Opus in the POC. Opus can be A/B'd later for orchestrator only.
 
 ### 23.2 Prompt caching
 
-Every facilitator call reuses the same system prompt + alignment-schema stanza — cache those. Rolling window context is non-cacheable; minimize it (§13.3 caps at N=50 events).
+Every orchestrator call reuses the same system prompt + alignment-schema stanza — cache those. Rolling window context is non-cacheable; minimize it (§13.3 caps at N=50 events).
 
 ### 23.3 Back-of-envelope session cost
 
 A 45-minute session, 3 humans, moderate activity:
 
 - ~120 utterances × Haiku classifier (~500 in / 200 out each) ≈ $0.10
-- ~30 facilitator calls (windows with novelty, out of 270 possible) × Sonnet (~3k in / 500 out each) ≈ $0.45
+- ~30 orchestrator calls (windows with novelty, out of 270 possible) × Sonnet (~3k in / 500 out each) ≈ $0.45
 - 1 ADR draft-all + 4 section regens × Sonnet ≈ $0.15
 - 1 plan generation × Sonnet ≈ $0.05
 
-Target: **under $1 per session** at POC scale. If this blows out, the facilitator trigger (§13.2) is the first lever — raise the novelty threshold, lengthen the window.
+Target: **under $1 per session** at POC scale. If this blows out, the orchestrator trigger (§13.2) is the first lever — raise the novelty threshold, lengthen the window.
 
 ### 23.4 Observability
 
@@ -874,7 +892,7 @@ Log every LLM call with: room_id, mode, model, input_tokens, output_tokens, late
 
 ## 24. Implementation Phases
 
-Demo-first ordering. The facilitator engine is second, not fifth — it is the product.
+Demo-first ordering. The orchestrator engine is second, not fifth — it is the product.
 
 ### Phase 0 — Project bootstrap (1–2 days)
 - Create package metadata and `README.md`
@@ -890,17 +908,20 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 - Presence over WebSocket
 - Human utterances persisted as append-only events
 - Room state includes active guardrail snapshot and basic component matches
+- Private perspective pane shell per participant
 - Basic room timeline UI
 - Exit: two browsers see each other's messages live
 
-### Phase 2 — Facilitator engine v0 (2–3 days) — **core value**
+### Phase 2 — Orchestrator engine v0 (2–3 days) — **core value**
 - Classifier worker (Haiku) turning utterances into typed deltas
+- Agent gateway with minimal private agent sessions
+- Routing and merge service for cross-participant relevance detection
 - Alignment snapshot reducer targeting the frozen v1 taxonomy (§12.1)
-- Facilitator worker (Sonnet) with full output contract (§13.4)
+- Orchestrator worker (Sonnet) with full output contract (§13.4)
 - Novelty gating, batching, cap (§13.2, §13.5)
-- Guardrail snapshot + matched component inputs wired into facilitator context
+- Guardrail snapshot + matched component inputs wired into orchestrator context
 - Alignment board UI with 8 node types
-- Exit: a 10-minute scripted brainstorm produces a coherent alignment snapshot and ≤ 1 facilitator update per 10s
+- Exit: a 10-minute scripted brainstorm with 2 humans + 2 private agents produces a coherent alignment snapshot and ≤ 1 orchestrator update per 10s
 
 ### Phase 3 — ADR editor and approval (2–3 days)
 - 12-section ADR model and editor
@@ -935,16 +956,16 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 - One-shot bundler: ADR + plan + patterns + alignment snapshot → JSON + Markdown export
 - Exit: a demo run produces a downloadable package
 
-### Phase 7+ (post-POC) — Attached-agent protocol
-Deferred. See §19.
+### Phase 7+ (post-POC) — Richer agent protocol
+Capability negotiation, tool-permission boundaries, remote runtimes, and multi-agent per human. See §19.
 
 ## 25. Testing Strategy
 
 ### Automated
 - Unit: alignment reducer, novelty hashing, claim TTL, dissent gate, guardrail gating, component scan normalization, ADR revision creation, subdecision conflict detection
 - Integration: room lifecycle, claim contention, WebSocket event ordering, component refresh, guardrail snapshotting, revision replay from event log
-- Contract: facilitator output conforms to §13.4 schema on golden transcripts
-- UI: ADR approval flow, plan approval flow, owner-acceptance gating, ownership overlap warnings, subdecision conflict resolution
+- Contract: orchestrator output conforms to §13.4 schema on golden transcripts
+- UI: ADR approval flow, plan approval flow, owner-acceptance gating, ownership overlap warnings, perspective-pane promotion flow, subdecision conflict resolution
 
 ### Manual (scripted scenarios)
 - **S1:** two humans, one disagrees on an option → room enters `decide` mode → `draft_adr` is blocked until the room records dissent → approval with `dissent_recorded`
@@ -952,11 +973,12 @@ Deferred. See §19.
 - **S3:** noisy 10-minute brainstorm → raw:shared ratio measured ≥ 10:1 (§3 goal 3)
 - **S4:** reconnect mid-session → client replays event log and restores state
 - **S5:** post-session alignment check — participants independently restate problem, decision, key tradeoff, first workstream, and remaining open question / owner
-- **S6:** workspace with active guardrails ("Rust only", preferred libraries, banned tech) → facilitator surfaces conflicts and approval is blocked until the ADR / plan records an exception or switches options
+- **S6:** workspace with active guardrails ("Rust only", preferred libraries, banned tech) → orchestrator surfaces conflicts and approval is blocked until the ADR / plan records an exception or switches options
 - **S7:** repo with a relevant existing component → component catalog surfaces it, and the plan either reuses it or explicitly justifies a net-new replacement
 - **S8:** two humans edit different fields of the same subdecision from the same base revision → server auto-merges into a new subdecision revision
 - **S9:** two humans edit the same field of the same subdecision from the same base revision → `subdecision.conflict.detected` appears and requires explicit resolution
-- **S10:** baseline head-to-head (§3 goal 9) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers + the same participant alignment check in both conditions
+- **S10:** A's agent identifies a relevant risk for B's proposal → orchestrator routes it to B and records the cross-participant relevance
+- **S11:** baseline head-to-head (§3 goal 9) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers + the same participant alignment check in both conditions
 
 ### Alignment check protocol
 - Immediately after ADR + plan approval, each participant privately answers five prompts without looking at the exported artifact.
@@ -965,7 +987,7 @@ Deferred. See §19.
 - Session pass threshold: at least 80% of participants score 4/5 or better.
 
 ### Baseline evaluation protocol
-- The workspace condition and baseline condition use the same briefing pack, participant roster size, and facilitator role.
+- The workspace condition and baseline condition use the same briefing pack, participant roster size, and neutral moderator role.
 - The baseline is: shared Google Doc + private Claude/ChatGPT use + live meeting.
 - Reviewers only see the exported ADR + plan, anonymized and randomized.
 - Each reviewer scores 1-5 on: problem framing, decision clarity, tradeoff explicitness, implementation specificity, and owner clarity.
@@ -993,21 +1015,21 @@ Primary:
 - LLM cost per session
 
 Qualitative (from participants):
-- "Was the facilitator useful or noise?"
+- "Was the orchestrator useful or noise?"
 - "Did the ADR match what you actually agreed on?"
 - "Did you leave knowing what happens next without reopening the debate?"
 - "Would you use this over a shared doc?"
 
 ## 27. Key Risks
 
-### 27.1 Facilitator produces false agreements
+### 27.1 Orchestrator produces false agreements
 Mitigation: human "reject synthesis" control that demotes to `unresolved_difference` and logs a correction the next call sees.
 
 ### 27.2 Alignment taxonomy too rigid or too loose
 Mitigation: frozen at 8 types for POC. Measure session-level "this didn't fit anywhere" corrections. Re-tune after 5 real sessions.
 
 ### 27.3 Cost runaway
-Mitigation: 8-call/min facilitator cap (§13.5), novelty-gate skips, prompt caching.
+Mitigation: 8-call/min orchestrator cap (§13.5), novelty-gate skips, prompt caching, and strict per-human agent session limits.
 
 ### 27.4 Ownership locks feel heavy
 Mitigation: 60s inactivity auto-release, visible claimant, overlap warning (not silent block with no recourse).
@@ -1022,7 +1044,7 @@ Mitigation: alignment board and ADR draft are always visible primary panels, not
 Mitigation: evidence-first discovery only, visible file-path evidence, human confirmation state, and approval gating based only on confirmed entries.
 
 ### 27.8 Guardrails become invisible prompt lore instead of product behavior
-Mitigation: explicit guardrails panel, room snapshotting, facilitator conflict surfacing, and approval-time enforcement.
+Mitigation: explicit guardrails panel, room snapshotting, orchestrator conflict surfacing, and approval-time enforcement.
 
 ### 27.9 Subdecision modeling becomes too granular and turns the room into paperwork
 Mitigation: restrict subdecisions to bounded architectural choices that merit independent history. Do not create them for prose-only edits, examples, or routine drafting.
@@ -1030,13 +1052,16 @@ Mitigation: restrict subdecisions to bounded architectural choices that merit in
 ### 27.10 Built-in conflict handling creates false confidence
 Mitigation: allow automatic merge only for disjoint structured fields. Same-field changes always produce explicit human-resolved conflicts.
 
+### 27.11 Private agents create a second layer of noise instead of better thinking
+Mitigation: private suggestions require human approval before promotion, routing relevance is explicitly scored, and the shared room only sees orchestrated outputs.
+
 ## 28. Known Dials (not open questions)
 
 These were "open questions" in v0.1. They are tunable parameters now.
 
 - **Q1. Private agent detail in live session.** Dial: perspective-pane verbosity slider (per-user). Default: medium. Test both extremes in scripted sessions.
 - **Q2. Alignment taxonomy.** Frozen at 8 types for POC (§12.1). Revisit after 5 sessions.
-- **Q3. Facilitator cadence.** Hybrid: 10s window OR 50-event backlog OR manual. §13.2. Tunable via `FACILITATOR_WINDOW_MS` env var.
+- **Q3. Orchestrator cadence.** Hybrid: 10s window OR 50-event backlog OR manual. §13.2. Tunable via `ORCHESTRATOR_WINDOW_MS` env var.
 - **Q4. Approval model for 2–5 humans.** Fixed decision-owner set declared at room creation. Default: unanimous approval from that set, with unresolved differences from any participant requiring resolution, dissent, or `non_blocking` triage. Revisit if rooms get larger.
 - **Q5. Pattern ranking.** Tag + substring only (§14). Embeddings + ranking are v2.
 - **Q6. Plan granularity.** Workstreams, not tickets (§16.3). If users complain it's too coarse, add a "break down" action that expands one workstream into sub-items.
@@ -1049,12 +1074,12 @@ Same as §24 phases, because §24 was already ordered by demo value:
 
 1. Phase 0: Project bootstrap
 2. Phase 1: Realtime room
-3. **Phase 2: Facilitator engine v0 — the product**
+3. **Phase 2: Orchestrator engine v0 — the product**
 4. Phase 3: ADR editor + dissent
 5. Phase 4: Plan editor
 6. Phase 5: Decision context management
 7. Phase 6: Handoff package
-8. (Post-POC) Attached-agent protocol
+8. (Post-POC) Richer agent protocol
 
 This order preserves a demoable human-centered product by the end of Phase 5 (~6–9 days). Phase 6 is export polish. Agent connectivity is v2.
 
@@ -1064,12 +1089,12 @@ What this is **not** reinventing, and why it is still different:
 
 - **Miro / FigJam** — freeform visual collaboration. No structured decision artifact, no denoising layer. We target the *output* (ADR + plan), not the canvas.
 - **Notion AI / Coda AI** — async doc + AI. No realtime synthesis across multiple humans talking at once.
-- **Linear Canvas / Stately** — planning and state machines. No decision-reasoning layer, no facilitator voice.
+- **Linear Canvas / Stately** — planning and state machines. No decision-reasoning layer, no orchestrator voice.
 - **tldraw + AI / Excalidraw + AI** — visual-first, no consensus model.
 - **Roam / Obsidian + AI** — single-user knowledge, not multi-human alignment.
 - **Shared Google Doc + ChatGPT/Claude copy-paste** — our explicit baseline (§3 goal 9). Cheap, available today, and what teams actually do. We must be meaningfully better than this.
 
-The differentiators we are betting on: **one facilitator voice**, **three-layer signal model**, **frozen alignment taxonomy**, **section-level single-writer locks**, and **ADR-as-decision-boundary**.
+The differentiators we are betting on: **one shared orchestrator voice**, **private human-agent loops**, **a mediated merge layer**, **frozen alignment taxonomy**, **section-level single-writer locks**, and **ADR-as-decision-boundary**.
 The supporting advantage is that the room starts with explicit context: known guardrails and reusable components, not just opinions and generated text.
 The history advantage is that the room preserves immutable ADR revisions and typed subdecision revisions instead of flattening everything into one mutable document.
 
@@ -1078,7 +1103,8 @@ The history advantage is that the room preserves immutable ADR revisions and typ
 Treat the first draft as a focused product experiment:
 
 - one central realtime room
-- one facilitator voice (Sonnet, 10s windows, full §13.4 contract)
+- one shared orchestrator voice (Sonnet, 10s windows, full §13.4 contract)
+- one private perspective pane and attached agent per participant
 - one alignment model (the 8-type v1 taxonomy)
 - one seeded pattern library (flat JSON, tag retrieval)
 - one explicit guardrail layer (workspace defaults + room overrides)
@@ -1088,6 +1114,6 @@ Treat the first draft as a focused product experiment:
 - one implementation plan (workstream-level, owner-accepted, open-question-triaged)
 - one live ownership model (section-level single-writer locks)
 - one optional handoff package
-- attached personal agent teams as v2, not the foundation
+- private human-agent ping-pong with orchestrated cross-participant routing as part of the POC foundation
 
-If Phases 0–5 hold and the combined baseline result lands, we have evidence that curated AI + structured human alignment beats the shared-doc baseline. That evidence earns the right to build v2 — richer agent connectivity, deeper memory, downstream execution automation. Without that result, the rest is decoration.
+If Phases 0–5 hold and the combined baseline result lands, we have evidence that orchestrated private-agent collaboration beats the shared-doc baseline. That evidence earns the right to build v2 — richer agent connectivity, deeper memory, downstream execution automation. Without that result, the rest is decoration.
