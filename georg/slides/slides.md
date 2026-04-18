@@ -16,7 +16,7 @@ fonts:
 
 <div class="flex items-center justify-center gap-4 mb-6">
   <span class="ra-live-dot"></span>
-  <span class="uppercase tracking-widest text-sm opacity-70">Tackling multiplayer · POC</span>
+  <span class="uppercase tracking-widest text-sm opacity-70">Tackling multiplayer</span>
 </div>
 
 # Realtime Decision Alignment
@@ -223,24 +223,30 @@ If the video is missing, run from georg/: `just demo` (renders with Remotion, co
 
 # Architecture
 
-```mermaid {scale: 0.9}
+<div class="mt-2 text-sm opacity-75">One shared room · private deltas · one ratchet from decision to handoff.</div>
+
+<div class="flex justify-center mt-4">
+
+```mermaid {scale: 0.55}
 flowchart LR
   subgraph client[Browser]
-    H[Humans<br/>presence + composer]
-    A[Private agents<br/>pending deltas]
+    H[Humans]
+    A[Private agents]
   end
   subgraph server[Bun + SQLite]
-    R[Shared room<br/>alignment board]
-    O[Orchestrator<br/>synthesis · routing]
-    ADR[ADR editor<br/>claim · review · approve]
-    PL[Plan<br/>workstreams · owners]
-    HO[Handoff package<br/>JSON export]
+    R[Shared room]
+    O[Orchestrator]
+    ADR[ADR]
+    PL[Plan]
+    HO[Handoff]
   end
   H -->|utterances| R
-  A -->|private deltas| R
+  A -->|deltas| R
   R <--> O
   R --> ADR --> PL --> HO
 ```
+
+</div>
 
 <div class="mt-6 grid grid-cols-4 gap-3 text-xs">
   <div class="ra-card">Bun + WebSockets · sub-second presence</div>
@@ -248,67 +254,6 @@ flowchart LR
   <div class="ra-card">OpenAI Responses · swappable provider</div>
   <div class="ra-card">React 19 · Vite · Slidev · Remotion</div>
 </div>
-
----
-
-# Why this wins
-
-<v-clicks>
-
-- **Humans stay in the loop** — nothing is generated until people agree
-- **Agents collaborate, don't compete** — every private delta funnels through one shared room
-- **No drift** — orchestrator re-anchors to the ADR every synthesis
-- **Speed** — quorum and readiness are *visual* · no meetings to re-check status
-- **Realtime** — Bun + WebSockets · changes reach every participant in < 1s
-- **Portable output** — the handoff package is a single JSON envelope downstream tools can replay
-- **Agent-ready** — a bridge plugin lets Codex, Claude, or any local agent submit deltas
-
-</v-clicks>
-
----
-
-# What we cut (and why)
-
-<div class="ra-grid-2 mt-8">
-
-<div class="ra-card">
-
-### Out of scope for the slice
-
-- CRDT co-editing
-- Voice / video
-- Autonomous agent decisions
-- Multi-workspace management UI
-- Streaming synthesis (SSE)
-
-</div>
-
-<div class="ra-card">
-
-### Why
-
-Every item we cut was something the **alignment primitive** doesn't need to prove.
-
-The slice has to show that *agreement before generation* survives contact with real humans and real LLMs. Everything else is an extension.
-
-</div>
-
-</div>
-
----
-
-# What's next
-
-<v-clicks>
-
-- **Streaming orchestrator** via server-sent events — synthesis appears token-by-token
-- **Multi-room workspaces** with cross-room evidence graphs
-- **First-class agent bridges** — Codex, Claude Code, Cursor
-- **Guardrail enforcement** at approval time (policy-as-code)
-- **Time-travel** — replay a decision by scrubbing the event log
-- **Exports** — Linear, Jira, GitHub issues from workstreams
-
-</v-clicks>
 
 ---
 layout: center
