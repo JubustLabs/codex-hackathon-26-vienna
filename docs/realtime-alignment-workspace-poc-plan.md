@@ -796,18 +796,16 @@ WS   /api/realtime
 
 WebSocket carries both user events and (v2) agent-runtime events on the same channel with actor-typed envelopes.
 
-## 22. Frontend Plan and Repo Transition
+## 22. Frontend Plan and Project Bootstrap
 
-### 22.1 Repo transition
+### 22.1 Project bootstrap
 
-The repo currently ships the "Predictive Bug Fix" scaffold (React + Vite, no backend). Phase 0 converts this into the alignment workspace scaffold:
+This plan assumes an empty-slate repo. Phase 0 bootstraps the alignment workspace foundation:
 
-- Rename package, update `README.md` to reflect the new product
-- Keep `biome.json`, `vite.config.js`, Justfile, pre-commit config
-- Retire `src/predictive_bug_fix/` and the `routes`/`catalog`/`hooks` demo pages in `src/app/pages.jsx`
-- Replace the route tree in `src/router/tree.js` with the route map below
-- Add a new Bun server entrypoint (`src/server/index.js`) with SQLite schema + WebSocket handler
-- Keep the existing route-tree introspection pattern — CLI can still walk the tree
+- Create package metadata and `README.md` for the new product
+- Scaffold the frontend app shell and route tree from the route map below
+- Add a Bun server entrypoint (`src/server/index.js`) with SQLite schema + WebSocket handler
+- Add baseline tooling/config only as needed for local development and demo reliability
 
 ### 22.2 Route map
 
@@ -878,14 +876,14 @@ Log every LLM call with: room_id, mode, model, input_tokens, output_tokens, late
 
 Demo-first ordering. The facilitator engine is second, not fifth — it is the product.
 
-### Phase 0 — Repo pivot (1–2 days)
-- Retire Predictive Bug Fix pages and skill
-- Rewrite `README.md`, route tree, package metadata
+### Phase 0 — Project bootstrap (1–2 days)
+- Create package metadata and `README.md`
+- Scaffold frontend app shell and route tree
 - Add Bun server entrypoint with SQLite schema
 - Seed workspace guardrails and component-catalog tables
 - Add basic evidence-scan job for component refresh
 - Wire HTTP + WebSocket in one process
-- Exit: static room page renders against real server, WebSocket round-trip works
+- Exit: app shell loads, server boots cleanly, and a browser client can complete a WebSocket round-trip
 
 ### Phase 1 — Realtime room foundation (1–2 days)
 - Room create + join + leave
@@ -1049,7 +1047,7 @@ These were "open questions" in v0.1. They are tunable parameters now.
 
 Same as §24 phases, because §24 was already ordered by demo value:
 
-1. Phase 0: Repo pivot
+1. Phase 0: Project bootstrap
 2. Phase 1: Realtime room
 3. **Phase 2: Facilitator engine v0 — the product**
 4. Phase 3: ADR editor + dissent
