@@ -622,7 +622,7 @@ export function RoomPage() {
               disabled={!canParticipate}
               placeholder={
                 canParticipate
-                  ? "Contribute to the shared room — a thought, a constraint, an option…"
+                  ? "Add a thought everyone should see — a goal, constraint, option, risk. Steer the room."
                   : "Observers are read-only in this slice."
               }
               rows={3}
@@ -1091,7 +1091,7 @@ export function RoomPage() {
             <h2>Your work</h2>
           </div>
           <small>
-            Pending deltas visible only to you and the orchestrator.
+            Your private agent suggests — you decide what enters the shared room. Nothing leaks.
           </small>
           <form
             className="stack-form"
@@ -1116,7 +1116,7 @@ export function RoomPage() {
               disabled={!canParticipate}
               placeholder={
                 canParticipate
-                  ? "Simulate a private agent delta or a local insight you might promote."
+                  ? "Drop what your private agent just suggested. Promote the good, discard the noise."
                   : "Observers cannot attach private agents."
               }
               rows={3}

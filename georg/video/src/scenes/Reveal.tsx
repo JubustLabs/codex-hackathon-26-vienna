@@ -59,7 +59,7 @@ export const Reveal = () => {
           style={{
             margin: 0,
             fontFamily: font.serif,
-            fontSize: 128,
+            fontSize: 112,
             fontWeight: 700,
             letterSpacing: "-0.025em",
             color: theme.ink,
@@ -67,20 +67,24 @@ export const Reveal = () => {
             ...fadeUp(frame, 36, 22, 24),
           }}
         >
-          Realtime Alignment Workspace
+          Real-time decision alignment,
+          <br />
+          <span style={{ color: theme.accentDeep, fontStyle: "italic" }}>
+            steered by humans.
+          </span>
         </h1>
         <p
           style={{
-            fontFamily: font.serif,
-            fontStyle: "italic",
-            fontSize: 62,
-            color: theme.accentDeep,
-            marginTop: 44,
-            letterSpacing: "-0.01em",
-            ...fadeUp(frame, 76, 24, 20),
+            fontFamily: font.sans,
+            fontSize: 32,
+            color: theme.muted,
+            marginTop: 40,
+            letterSpacing: "0.01em",
+            fontWeight: 500,
+            ...fadeUp(frame, 84, 22, 18),
           }}
         >
-          Agreement before generation.
+          One room. Agents collaborate. You decide.
         </p>
       </div>
     </AbsoluteFill>

@@ -5,17 +5,20 @@ import { clamp, fadeUp } from "../lib/motion";
 
 const columns = [
   {
-    name: "Agent A",
+    owner: "Alice",
+    agent: "her codex",
     color: theme.goal,
     lines: ["fn handle() {", "  retry(3);", "  await task", "  ship.ok", "}"],
   },
   {
-    name: "Agent B",
+    owner: "Bob",
+    agent: "his codex",
     color: theme.option,
     lines: ["def handle():", "  return task()", "  # no retry", "  return none", ""],
   },
   {
-    name: "Agent C",
+    owner: "Chen",
+    agent: "their codex",
     color: theme.risk,
     lines: ["func handle() {", "  if !ok {", "    panic(err)", "  }", "}"],
   },
@@ -37,13 +40,16 @@ export const Pain = () => {
       {columns.map((col, i) => {
         const shake =
           Math.sin((frame - 30 - i * 8) * 0.28) *
-          clamp(frame, [40 + i * 10, 120], [0, 8]);
+          clamp(frame, [40 + i * 10, 120], [0, 10]);
+        const tilt =
+          Math.sin((frame - 44 - i * 11) * 0.18) *
+          clamp(frame, [60 + i * 6, 130], [0, 1.2]);
         return (
           <div
-            key={col.name}
+            key={col.owner}
             style={{
               ...fadeUp(frame, 8 + i * 10, 20, 24),
-              transform: `translate(${shake}px, 0)`,
+              transform: `translate(${shake}px, 0) rotate(${tilt}deg)`,
               background: "#242019",
               border: `1px solid ${col.color}66`,
               borderRadius: 22,
@@ -57,16 +63,36 @@ export const Pain = () => {
           >
             <div
               style={{
-                fontFamily: font.sans,
-                fontSize: 18,
-                color: col.color,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 10,
                 marginBottom: 20,
-                fontWeight: 700,
               }}
             >
-              {col.name}
+              <div
+                style={{
+                  fontFamily: font.sans,
+                  fontSize: 22,
+                  color: col.color,
+                  fontWeight: 700,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {col.owner}
+              </div>
+              <div
+                style={{
+                  fontFamily: font.sans,
+                  fontSize: 12,
+                  color: "#a89e88",
+                  letterSpacing: "0.22em",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                }}
+              >
+                {col.agent}
+              </div>
             </div>
             {col.lines.map((l, j) => (
               <div key={j} style={{ opacity: l ? 1 : 0.2 }}>
@@ -84,14 +110,15 @@ export const Pain = () => {
           right: 0,
           textAlign: "center",
           fontFamily: font.serif,
-          fontSize: 56,
+          fontSize: 52,
           color: "#f1e5cb",
           letterSpacing: "-0.01em",
           ...fadeUp(frame, 60, 22, 18),
         }}
       >
-        Four engineers. Three LLMs.{" "}
-        <span style={{ color: theme.accent, fontStyle: "italic" }}>Zero alignment.</span>
+        Your agents{" "}
+        <span style={{ color: theme.accent, fontStyle: "italic" }}>fight</span>{" "}
+        your colleague's agents.
       </div>
     </AbsoluteFill>
   );

@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Remotion composition for the Realtime Alignment Workspace hackathon demo video.",
   "scripts": {
-    "dev": "remotion studio src/index.ts",
-    "build": "remotion render src/index.ts RealtimeAlignment out/realtime-alignment.mp4",
-    "still": "remotion still src/index.ts RealtimeAlignment out/thumbnail.png --frame=360",
+    "dev": "bun x remotion studio src/index.ts",
+    "build": "bun x remotion render src/index.ts RealtimeAlignment out/realtime-alignment.mp4",
+    "still": "bun x remotion still src/index.ts RealtimeAlignment out/thumbnail.png --frame=360",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

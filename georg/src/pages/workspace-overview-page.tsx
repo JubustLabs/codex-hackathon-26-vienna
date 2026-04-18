@@ -26,8 +26,9 @@ export function WorkspaceOverviewPage() {
         <p className="eyebrow">POC · vertical slice</p>
         <h1>Agreement before generation</h1>
         <p>
-          A realtime room where humans and private agents converge on a decision, an ADR, and an executable plan — with ownership,
-          guardrails, and handoff baked in.
+          Generating code has never been easier. Agreeing on <em>what</em> to build is still hard.
+          This is the room where your agents stop fighting your colleague's agents — and you, the human, stay in the loop to steer.
+          One shared decision, one ADR, one plan, one handoff.
         </p>
         <div className="hero-actions">
           <Link className="button primary" to="/rooms/new">

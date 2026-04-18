@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Slidev deck for the Realtime Alignment Workspace hackathon pitch.",
   "scripts": {
-    "dev": "slidev --open",
-    "build": "slidev build",
-    "export": "slidev export"
+    "dev": "bun x slidev --open",
+    "build": "bun x slidev build",
+    "export": "bun x slidev export"
   },
   "dependencies": {
     "@slidev/cli": "latest",

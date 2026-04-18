@@ -5,15 +5,19 @@ default:
 
 # --- app ------------------------------------------------------------------
 
+[private]
 ensure-app:
   [ -d node_modules ] || bun install
 
+[private]
 ensure-slides:
   [ -d slides/node_modules ] || (cd slides && bun install)
 
+[private]
 ensure-video:
   [ -d video/node_modules ] || (cd video && bun install)
 
+[private]
 ensure-slide-video: ensure-video
   mkdir -p slides/public
   [ -f video/out/realtime-alignment.mp4 ] || (cd video && bun run build)
@@ -87,7 +91,7 @@ video-still: ensure-video
 slides-install:
   cd slides && bun install
 
-# Serve the deck at http://localhost:3030.
+# Serve the deck locally.
 slides-dev: ensure-slides ensure-slide-video
   cd slides && bun run dev
 

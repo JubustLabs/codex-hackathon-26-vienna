@@ -4,12 +4,12 @@ import { font, theme } from "../lib/theme";
 import { fadeUp } from "../lib/motion";
 
 const lines = [
-  { t: "No more drift.", at: 0, size: 132 },
+  { t: "No more fighting agents.", at: 0, size: 132 },
   { t: "No more lost context.", at: 60, size: 132 },
   {
-    t: "Just a room — where people and agents agree — before a single line of code is generated.",
+    t: "One room — where people and their agents agree — before a single line of code is generated.",
     at: 130,
-    size: 62,
+    size: 60,
     accent: true,
   },
 ];

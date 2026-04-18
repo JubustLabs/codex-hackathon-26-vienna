@@ -21,7 +21,7 @@ fonts:
 
 # Realtime Alignment Workspace
 
-<p class="ra-tagline mt-6 text-3xl">Agreement before generation.</p>
+<p class="ra-tagline mt-6 text-3xl">Humans steer. Agents collaborate.</p>
 
 <div class="pt-10 text-sm opacity-60">
   Codex Hackathon · Vienna · 2026
@@ -36,9 +36,25 @@ layout: center
 class: text-center
 ---
 
-# Every AI coding tool skips the hardest part.
+# Generating code has never been easier.
 
-<h1 class="mt-10" style="font-size: 6rem; color: var(--ra-accent); font-style: italic;">Agreement.</h1>
+<h1 class="mt-10" style="font-size: 5rem; color: var(--ra-accent); font-style: italic; line-height: 1.05;">
+  Agreeing on <em>what</em> to build<br/>is still hard.
+</h1>
+
+---
+layout: center
+class: text-center
+---
+
+# And right now?
+
+<h1 class="mt-10" style="font-size: 4.2rem; color: var(--ra-ink); line-height: 1.1;">
+  Your agents are <span style="color: var(--ra-accent); font-style: italic;">fighting</span><br/>
+  your colleague's agents.
+</h1>
+
+<p class="mt-8 text-xl opacity-70">Four engineers. Three LLMs. Zero shared context.</p>
 
 ---
 
@@ -50,11 +66,11 @@ class: text-center
 
 <v-clicks>
 
-- **Four engineers** on one decision
-- **Three LLMs** running in parallel
-- **Zero shared context** across any of it
+- Private agents drafting in isolation
+- Slack threads drifting in parallel
 - Everyone ships different code
 - Nobody trusts any of it
+- The ADR — if one exists — is stale by Monday
 
 </v-clicks>
 
@@ -62,13 +78,12 @@ class: text-center
 
 <div class="ra-card">
 
-**What happens today**
+**What's missing**
 
-1. Slack thread drifts
-2. Agents generate in isolation
-3. Code review becomes re-litigation
-4. Nobody remembers *why* the choice was made
-5. The ADR, if one exists, is stale by Monday
+1. A **shared room** where state is synthesized live
+2. **Human control** over what enters it
+3. A **ratchet** from decision → ADR → plan → handoff
+4. **Evidence** every step traces back to
 
 </div>
 
@@ -78,18 +93,20 @@ class: text-center
 
 # Our thesis
 
+<p class="ra-tagline text-2xl mt-2">Real-time decision alignment — steered by humans — is possible.</p>
+
 <v-clicks depth="2">
 
-- **Shared room** — humans + agents see the same synthesized state
-- **Private work** — agents drop deltas only you see, then you promote
-- **Orchestrator** — synthesizes, nudges, routes insights
+- **One shared room** — humans + agents see the same synthesized state
+- **Private work stays private** — your agents drop deltas only you see, then *you* promote
+- **Orchestrator, not autopilot** — synthesizes, nudges, routes insights · never decides
 - **Gates, not drift** — ADR approved → plan generated → handoff shipped
 - **Evidence, not vibes** — every node traces back to an event in the log
 
 </v-clicks>
 
-<div v-click class="mt-10 ra-tagline text-2xl">
-  Agreement before generation.
+<div v-click class="mt-8 ra-tagline text-2xl">
+  Agreement <em>before</em> generation.
 </div>
 
 ---
@@ -119,7 +136,7 @@ Every utterance is classified into a node with confidence and an event trail.
 
 Your codex plugin drops deltas visible only to you and the orchestrator.
 
-**Promote** to share, **discard** when it misses. No leakage.
+**You** promote the good, discard the noise. Agents never leak into the room on their own.
 
 </div>
 
@@ -127,7 +144,9 @@ Your codex plugin drops deltas visible only to you and the orchestrator.
 
 ### Orchestrator
 
-Synthesizes recent events, suggests the next move, and routes private nudges to the participant who needs them.
+Synthesizes recent events, suggests the next move, routes private nudges to the person who needs them.
+
+Assists — never decides. **Humans stay in the loop.**
 
 </div>
 
@@ -240,9 +259,10 @@ flowchart LR
 
 <v-clicks>
 
-- **Trust** — nothing is generated until humans agree
-- **Speed** — quorum and readiness are *visual* · no meetings to re-check status
+- **Humans stay in the loop** — nothing is generated until people agree
+- **Agents collaborate, don't compete** — every private delta is funneled through one shared room
 - **No drift** — orchestrator re-anchors to the ADR every synthesis
+- **Speed** — quorum and readiness are *visual* · no meetings to re-check status
 - **Realtime** — Bun + WebSockets · changes reach every participant in < 1s
 - **Portable output** — the handoff package is a single JSON envelope downstream tools can replay
 - **Agent-ready** — a bridge plugin lets Codex, Claude, or any local agent submit deltas
@@ -306,7 +326,7 @@ class: text-center
 
 # Realtime Alignment Workspace
 
-<p class="ra-tagline mt-6 text-3xl">Agreement before generation.</p>
+<p class="ra-tagline mt-6 text-3xl">Humans steer. Agents collaborate. Agreement before generation.</p>
 
 <div class="pt-10 opacity-60 text-sm">
   Q &amp; A · <kbd>esc</kbd> to exit · <kbd>p</kbd> for presenter mode

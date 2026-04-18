@@ -1,4 +1,4 @@
-# Realtime Decision Alignment
+# Tackling multiplayer: Realtime Decision Alignment
 
 It has never been easier to generate code.
 But agreeing on what to do (scoping) is stil hard.
@@ -17,7 +17,7 @@ This:
 
 - renders the latest video
 - copies it into the deck
-- opens the slides at `http://localhost:3030`
+- opens the deck in your browser
 
 If the video already exists and you just want the deck:
 
@@ -31,7 +31,8 @@ Deck only:
 just slides-dev
 ```
 
-On first run, the slide commands will auto-install missing slide/video dependencies and render the demo video asset if needed.
+Slide commands auto-install missing dependencies and render the demo video asset if needed.
+If the default Slidev port is already taken, use the URL printed in the terminal.
 
 Useful slide commands:
 
@@ -50,7 +51,7 @@ Output:
 
 - `video/out/realtime-alignment.mp4`
 
-On first run, this may auto-install video dependencies and download Remotion's headless browser once.
+On first run, this may auto-install video dependencies and download Remotion's browser once.
 
 Optional:
 
@@ -72,7 +73,7 @@ Run these from `georg/`.
 just setup
 ```
 
-Installs app, slide, and video dependencies.
+Installs app, slide, and video dependencies up front.
 
 ### Validate
 
@@ -168,17 +169,3 @@ Stop the session:
 ```bash
 just demo-stop
 ```
-
-Direct bridge commands if you want to drive it manually:
-
-```bash
-just bridge-watch ROOM_ID PARTICIPANT_ID alice-codex
-just bridge-submit ROOM_ID PARTICIPANT_ID alice-codex "Keep humans in control of promotion."
-```
-
-## Notes
-
-- Shared room sockets use `/ws`.
-- Local agent runtimes use `/agent-ws`.
-- Pending private deltas stay private until a human promotes them.
-- The browser UI is snapshot-driven and refreshes over WebSocket invalidation.

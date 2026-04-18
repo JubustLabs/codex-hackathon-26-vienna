@@ -44,10 +44,10 @@ export const Private = () => {
             marginTop: 18,
           }}
         >
-          Work alone.
+          Your agent suggests.
           <br />
           <span style={{ color: theme.accentDeep, fontStyle: "italic" }}>
-            Commit when you&rsquo;re sure.
+            You decide what the room sees.
           </span>
         </div>
         <p
@@ -60,8 +60,8 @@ export const Private = () => {
             maxWidth: 720,
           }}
         >
-          Private agents drop deltas only you see. Promote to share — discard
-          when they miss.
+          Private deltas stay private until a human promotes them. No leakage,
+          no autopilot — humans steer.
         </p>
 
         <div

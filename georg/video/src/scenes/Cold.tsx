@@ -5,7 +5,7 @@ import { clamp, fadeUp } from "../lib/motion";
 
 export const Cold = () => {
   const frame = useCurrentFrame();
-  const glow = clamp(frame, [20, 70], [0, 1]);
+  const glow = clamp(frame, [36, 78], [0, 1]);
 
   return (
     <AbsoluteFill
@@ -16,7 +16,7 @@ export const Cold = () => {
         padding: 120,
       }}
     >
-      <div style={{ textAlign: "center", color: "#f1e5cb" }}>
+      <div style={{ textAlign: "center", color: "#f1e5cb", maxWidth: 1600 }}>
         <div
           style={{
             fontFamily: font.sans,
@@ -24,25 +24,49 @@ export const Cold = () => {
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "#a89e88",
-            marginBottom: 44,
+            marginBottom: 32,
             fontWeight: 500,
-            ...fadeUp(frame, 6, 18),
+            ...fadeUp(frame, 4, 16),
           }}
         >
-          Every AI coding tool skips the hardest part.
+          Generating code has never been easier.
         </div>
         <div
           style={{
             fontFamily: font.serif,
-            fontSize: 220,
+            fontSize: 124,
             fontWeight: 700,
-            letterSpacing: "-0.025em",
-            color: theme.accent,
-            textShadow: `0 0 ${60 * glow}px rgba(184, 74, 45, ${0.55 * glow})`,
-            ...fadeUp(frame, 30, 22, 28),
+            letterSpacing: "-0.022em",
+            lineHeight: 1.02,
+            color: "#f7ecd1",
+            ...fadeUp(frame, 22, 20, 24),
           }}
         >
-          Agreement.
+          Agreeing on{" "}
+          <span
+            style={{
+              fontStyle: "italic",
+              color: theme.accent,
+              textShadow: `0 0 ${60 * glow}px rgba(184, 74, 45, ${0.55 * glow})`,
+            }}
+          >
+            what
+          </span>{" "}
+          to build
+        </div>
+        <div
+          style={{
+            fontFamily: font.serif,
+            fontSize: 124,
+            fontWeight: 700,
+            letterSpacing: "-0.022em",
+            lineHeight: 1.02,
+            color: "#f7ecd1",
+            marginTop: 10,
+            ...fadeUp(frame, 40, 22, 26),
+          }}
+        >
+          is still <span style={{ fontStyle: "italic", color: theme.accent }}>hard</span>.
         </div>
       </div>
     </AbsoluteFill>

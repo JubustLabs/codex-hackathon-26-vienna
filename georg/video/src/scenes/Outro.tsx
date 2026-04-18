@@ -57,9 +57,12 @@ export const Outro = () => {
             fontSize: 50,
             color: theme.accentDeep,
             marginTop: 26,
+            lineHeight: 1.15,
             ...fadeUp(frame, 18, 24, 18),
           }}
         >
+          Humans steer. Agents collaborate.
+          <br />
           Agreement before generation.
         </div>
         <div

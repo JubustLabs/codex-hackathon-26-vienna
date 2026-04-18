@@ -24,7 +24,7 @@ export function App() {
         <Link className="brand" to="/">
           <span className="brand-wrap">
             <span>Realtime Alignment Workspace</span>
-            <span className="brand-tag">agreement before generation</span>
+            <span className="brand-tag">humans steer · agents collaborate</span>
           </span>
         </Link>
         <nav className="topnav">
@@ -52,7 +52,7 @@ export function App() {
 
       <footer className="footer">
         <span className="footer-dot">
-          <strong>Live workspace</strong> · realtime ADR + plan + handoff
+          <strong>Live workspace</strong> · humans steer · agents collaborate
         </span>
         <span>Bun · React 19 · SQLite · POC vertical slice</span>
       </footer>
