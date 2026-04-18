@@ -124,6 +124,37 @@ MARKETING_URL="$APP_URL/rooms/$ROOM_ID?participantId=$MARKETING_ID"
 SUPPORT_URL="$APP_URL/rooms/$ROOM_ID?participantId=$SUPPORT_ID"
 IT_URL="$APP_URL/rooms/$ROOM_ID?participantId=$IT_ID"
 
+# Make the multi-codex + MCP plugin story visible at a glance: every bridge
+# pane gets a titled border and a startup banner. Anyone watching the tmux
+# can immediately see *three independent codexes* connecting through the MCP
+# bridge into one shared room.
+tmux set -t "$SESSION_NAME" -w pane-border-status top >/dev/null 2>&1 || true
+tmux set -t "$SESSION_NAME" -w pane-border-format " #{pane_title} " >/dev/null 2>&1 || true
+tmux select-pane -t "$MAIN_PANE"       -T "🛠  app server + frontend" >/dev/null 2>&1 || true
+tmux select-pane -t "$MARKETING_PANE"  -T "📣  Maya · marketing-codex → MCP bridge" >/dev/null 2>&1 || true
+tmux select-pane -t "$SUPPORT_PANE"    -T "🛟  Sam · support-codex → MCP bridge"    >/dev/null 2>&1 || true
+tmux select-pane -t "$IT_PANE"         -T "🛡  Ivo · it-codex → MCP bridge"         >/dev/null 2>&1 || true
+tmux select-pane -t "$INFO_PANE"       -T "ℹ️   demo helper"                        >/dev/null 2>&1 || true
+
+codex_banner() {
+  local pane="$1"
+  local display="$2"
+  local emoji="$3"
+  local agent="$4"
+  local participant_id="$5"
+  tmux send-keys -t "$pane" "clear" C-m
+  tmux send-keys -t "$pane" "printf '\n%s %s local codex\n' '$emoji' '$display'" C-m
+  tmux send-keys -t "$pane" "printf '   codex agent    : %s\n' '$agent'" C-m
+  tmux send-keys -t "$pane" "printf '   participant    : %s\n' '$participant_id'" C-m
+  tmux send-keys -t "$pane" "printf '   MCP bridge     : plugins/codex-room-bridge\n'" C-m
+  tmux send-keys -t "$pane" "printf '   shared room    : %s\n\n' '$ROOM_ID'" C-m
+  tmux send-keys -t "$pane" "printf 'streaming private deltas from this codex into the room →\n\n'" C-m
+}
+
+codex_banner "$MARKETING_PANE" "Maya · Marketing"  "📣" "marketing-codex" "$MARKETING_ID"
+codex_banner "$SUPPORT_PANE"   "Sam · Support"     "🛟" "support-codex"   "$SUPPORT_ID"
+codex_banner "$IT_PANE"        "Ivo · IT"          "🛡" "it-codex"        "$IT_ID"
+
 tmux send-keys -t "$MARKETING_PANE" "just bridge-watch $ROOM_ID $MARKETING_ID marketing-codex" C-m
 tmux send-keys -t "$SUPPORT_PANE" "just bridge-watch $ROOM_ID $SUPPORT_ID support-codex" C-m
 tmux send-keys -t "$IT_PANE" "just bridge-watch $ROOM_ID $IT_ID it-codex" C-m

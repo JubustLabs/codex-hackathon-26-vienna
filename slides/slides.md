@@ -27,10 +27,6 @@ fonts:
   Codex Hackathon · Vienna · 2026
 </div>
 
-<div class="pt-2 text-xs opacity-50">
-  Press <kbd>→</kbd> to start · <kbd>o</kbd> for overview · <kbd>d</kbd> for dark mode
-</div>
-
 ---
 layout: center
 class: text-center
@@ -56,7 +52,7 @@ class: text-center
   your colleague's agents.
 </h1>
 
-<p class="mt-8 text-xl opacity-70">Four engineers. Three LLMs. Zero shared context.</p>
+<p class="mt-8 text-xl opacity-70">Multiple teams. Multiple LLMs. Zero shared context.</p>
 
 ---
 
@@ -210,7 +206,7 @@ If the video is missing, run from the repo root: `just demo` (renders with Remot
 
 ---
 
-# Live demo — the path we'll walk
+# Demo — the path we'll walk
 
 <div class="grid grid-cols-2 gap-6 mt-4">
 
@@ -306,5 +302,5 @@ class: text-center
 <p class="ra-tagline mt-2 text-xl">Agreement <em>before</em> generation.</p>
 
 <div class="pt-10 opacity-60 text-sm">
-  Q &amp; A · <kbd>esc</kbd> to exit · <kbd>p</kbd> for presenter mode
+  Q &amp; A
 </div>
