@@ -12,9 +12,7 @@
   "license": "UNLICENSED",
   "keywords": ["codex", "realtime-room", "websocket", "mcp", "hackathon"],
   "skills": "./skills/",
-  "hooks": "./hooks.json",
   "mcpServers": "./.mcp.json",
-  "apps": "./.app.json",
   "interface": {
     "displayName": "Codex Room Bridge",
     "shortDescription": "Control the georg room from Codex over a local MCP server and bridge private deltas.",
