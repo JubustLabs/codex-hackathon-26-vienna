@@ -398,7 +398,12 @@ async function runOnce() {
   }
 
   // --- phase 6: approve the shared decision ---------------------------
+  // Every decision owner must approve for status → "approved". Maya
+  // (marketing) and Sam (support) are both owners; both sign off, and only
+  // then does the ADR lock so Maya can build the plan.
   await approveAdr("marketing");
+  await quickBeat();
+  await approveAdr("support");
   await beat();
 
   // --- phase 7: alignment plan ----------------------------------------
@@ -406,7 +411,10 @@ async function runOnce() {
   await beat();
   await acceptAllPlanOwners("marketing");
   await beat();
+  // Plan approval also requires every decision owner.
   await approvePlan("marketing");
+  await quickBeat();
+  await approvePlan("support");
   await beat();
 
   // --- phase 8: handoff ------------------------------------------------

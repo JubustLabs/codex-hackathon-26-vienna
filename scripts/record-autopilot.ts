@@ -179,44 +179,74 @@ async function main() {
   // this the browser stays pinned at the top and the ADR / plan / handoff
   // panels (which live further down the center column) never appear in the
   // recording. Scrolls use `h2:has-text(...)` on the stable panel headings.
+  let scrollCancelled = false;
+  const cancellableWait = (ms: number) =>
+    new Promise<void>((resolve) => {
+      const tick = 200;
+      let elapsed = 0;
+      const id = setInterval(() => {
+        elapsed += tick;
+        if (scrollCancelled || elapsed >= ms) {
+          clearInterval(id);
+          resolve();
+        }
+      }, tick);
+    });
+
   const scrollScript = async () => {
-    const scrollTo = async (selectorText: string, block: "start" | "center" = "start") => {
+    const scrollTo = async (selectorText: string) => {
+      if (scrollCancelled || page.isClosed()) return;
       try {
         const locator = page.locator(`h2:has-text("${selectorText}")`).first();
         await locator.scrollIntoViewIfNeeded({ timeout: 2000 });
-        // nudge upward so the heading isn't pinned against the top edge
-        if (block === "start") {
-          await page.evaluate(() => window.scrollBy({ top: -80, left: 0, behavior: "smooth" }));
-        }
+        if (scrollCancelled || page.isClosed()) return;
+        await page.evaluate(() => window.scrollBy({ top: -80, left: 0, behavior: "smooth" }));
       } catch {
-        // selector may not exist yet (phase not reached) — safe to skip
+        // Selector may not exist yet, or the page may have closed — either
+        // way, just skip the step.
       }
     };
 
-    const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+    const nudge = async (dy: number) => {
+      if (scrollCancelled || page.isClosed()) return;
+      try {
+        await page.evaluate(
+          (y) => window.scrollBy({ top: y, left: 0, behavior: "smooth" }),
+          dy,
+        );
+      } catch {
+        // Ignore if the page is gone.
+      }
+    };
 
-    // t ≈ 0–25s: stay at the top so the alignment board is in view while
-    // utterances + private deltas + promotes happen.
-    await wait(26_000);
-    // t ≈ 26s: synthesis has published — pan down to orchestrator + shared
-    // decision area so viewers see sections being claimed + drafted.
+    // t ≈ 0–26s: stay at the top so the alignment board frames utterances +
+    // private deltas + promotes + synthesis.
+    await cancellableWait(26_000);
+    // t ≈ 26s: synthesis has published — scroll to the shared decision
+    // draft so every section-claim/edit/review happens on screen.
     await scrollTo("Shared decision draft");
-    await wait(28_000);
-    // t ≈ 54s: shared decision approved, plan about to generate. Pull the
-    // alignment plan panel into view.
+    await cancellableWait(28_000);
+    // t ≈ 54s: decision approved, plan generating. Pull "Alignment plan"
+    // into view.
     await scrollTo("Alignment plan");
-    await wait(24_000);
+    await cancellableWait(24_000);
     // t ≈ 78s: plan approved, handoff being generated. Nudge further so the
-    // "Create handoff" button + result are visible.
-    await page.evaluate(() => window.scrollBy({ top: 320, left: 0, behavior: "smooth" }));
-    await wait(12_000);
-    // Brief pull back to the top for the outro so the full room frames the
-    // closing shot.
-    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "smooth" }));
+    // "Create handoff" button + JSON envelope land in frame.
+    await nudge(320);
+    await cancellableWait(12_000);
+    // Outro: pull back to the top to frame the full room.
+    if (!scrollCancelled && !page.isClosed()) {
+      try {
+        await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "smooth" }));
+      } catch {
+        // Page may have closed between the check and the call.
+      }
+    }
   };
 
-  const scrollTask = scrollScript().catch((error) => {
-    console.log(`• scroll orchestration error: ${error instanceof Error ? error.message : String(error)}`);
+  const scrollTask = scrollScript().catch(() => {
+    // scrollScript guards every page.evaluate, but defense in depth in case
+    // a timing hole lets one through.
   });
 
   const totalMs = args.durationSec * 1000;
@@ -225,7 +255,10 @@ async function main() {
     new Promise<void>((r) => setTimeout(r, totalMs)),
   ]);
   await deadline;
-  await Promise.race([scrollTask, new Promise<void>((r) => setTimeout(r, 500))]);
+  // Tell the scroll script to stop touching the page; the browser is about
+  // to close.
+  scrollCancelled = true;
+  await scrollTask;
 
   if (autopilot.exitCode === null) {
     console.log("• autopilot still running past deadline — killing");
