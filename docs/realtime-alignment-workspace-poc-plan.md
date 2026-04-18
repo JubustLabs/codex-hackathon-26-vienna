@@ -62,7 +62,7 @@ Explicitly deferred:
 - enterprise multi-tenancy, billing, marketplaces
 - fully autonomous code execution
 - audio, video, multimodal collaboration
-- **CRDT-based co-editing** — we use section-level pessimistic locks via ownership claims instead (§12.4)
+- **CRDT-based co-editing for ADR / plan prose** — we use section-level pessimistic locks via ownership claims instead (§12.4); only typed subdecision fields get structured conflict detection
 - external identity, SSO, advanced RBAC
 - pattern-memory promotion workflows, versioning, ranking signals — POC ships a flat seeded library only
 - deep semantic code-graph analysis or runtime tracing for component discovery — the POC uses evidence-backed manifest / repo discovery plus human confirmation
@@ -101,6 +101,12 @@ When an existing component already fits the decision space, the room should see 
 
 ### 5.11 Guardrails are explicit product inputs
 Technology preferences and constraints such as "we use Rust", "prefer Postgres", or "do not add a second queue" belong in structured guardrails, not buried in prompts or tribal memory.
+
+### 5.12 Revision history is a product surface
+The room should not only produce the latest ADR. It should preserve immutable ADR revisions, the version history of major subdecisions, and the provenance of approvals so teams can see how the decision changed over time.
+
+### 5.13 Structured conflicts may be machine-detected; prose conflicts may not
+For free-form ADR and plan text, the product should prevent overlap with ownership locks. For typed subdecisions, the product may detect field-level conflicts and auto-merge only when the changes are semantically disjoint.
 
 ## 6. Primary Users
 
@@ -158,7 +164,7 @@ The per-human perspective pane for attached agents is a v2 surface and is intent
 
 ## 9. POC Scope
 
-**In:** text-first collaboration, one workspace, one live room type, one facilitator stream, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, implementation plan generation + approval, live ownership, audit log.
+**In:** text-first collaboration, one workspace, one live room type, one facilitator stream, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, ADR revision history, typed subdecision tracking, implementation plan generation + approval, live ownership, audit log.
 
 **Out:** voice, video, multiple room archetypes, multi-workspace federation, external IdPs, analytics dashboards, autonomous execution, the full attached-agent protocol and any participant-facing perspective pane (kept as a stub only, §19), and deep whole-codebase semantic discovery beyond evidence-backed POC heuristics.
 
@@ -173,6 +179,7 @@ React Client(s)
   <-> Bun HTTP + WebSocket server
         -> Session Manager (room lifecycle, presence, locks)
         -> Event Store (SQLite append-only)
+        -> Revision Service (ADR / subdecision / plan snapshots)
         -> Guardrail Service (workspace defaults + room overrides)
         -> Component Catalog Service (manifest/repo scan + confirmation state)
         -> Classifier Worker (per-utterance, Haiku)
@@ -193,14 +200,18 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 - **Auth:** magic-link + room token. No SSO.
 - **Deployment:** single host (Fly.io or equivalent). One `.env`. One process.
 
-### 10.3 Concurrency model
+### 10.3 Concurrency and conflict model
 
-**Section-level pessimistic locks** backed by ownership claims. Decision rationale: CRDTs are out of scope for a POC, and last-writer-wins produces exactly the silent overlap the product is supposed to prevent.
+**Section-level pessimistic locks** backed by ownership claims remain the default for ADR and plan prose. Decision rationale: CRDTs are out of scope for a POC, and last-writer-wins produces exactly the silent overlap the product is supposed to prevent.
 
 - A section (ADR section, plan workstream) has at most one active claimant.
 - Claim TTL: 60s of inactivity auto-releases.
 - Server rejects writes to an unclaimed section. Frontend disables the editor until claim is held.
 - Alignment nodes are facilitator-written; humans correct via typed `alignment_correction` deltas rather than direct edit.
+- ADR and plan prose do **not** use character-level merge or CRDT conflict resolution in the POC.
+- Typed subdecisions use optimistic concurrency with `base_revision_id`.
+- The server may auto-merge subdecision writes only when they touch disjoint fields or additive collections.
+- If two writes change the same semantic field of a subdecision, the server emits a conflict record instead of guessing a merge. Humans resolve that conflict explicitly.
 
 ## 11. Major Backend Components
 
@@ -216,10 +227,10 @@ Cost profile: ~500 input + 200 output tokens per call. Fires only on human utter
 The product's center of gravity. See §13 for the full spec. One call every 10s over the last window, or on manual "synthesize now". Emits exactly one `facilitator_update` event.
 
 ### 11.4 ADR compiler
-Template-driven, LLM-filled. Input: current alignment snapshot + ADR state + active guardrails + relevant confirmed components. Output: section-level diffs keyed by §15.2 headers. Called on demand from the UI ("regenerate section" or "draft all"), not on every tick.
+Template-driven, LLM-filled. Input: current alignment snapshot + ADR state + current subdecision state + active guardrails + relevant confirmed components. Output: section-level diffs keyed by §15.2 headers. Called on demand from the UI ("regenerate section" or "draft all"), not on every tick.
 
 ### 11.5 Plan generator
-One-shot from approved ADR. Template in §16. Emits a draft implementation plan with workstream-level granularity, reuse suggestions, and any required guardrail exception slots. Never runs automatically — humans trigger after ADR approval.
+One-shot from an approved ADR revision. Template in §16. Emits a draft implementation plan with workstream-level granularity, reuse suggestions, and any required guardrail exception slots. Never runs automatically — humans trigger after ADR approval.
 
 ### 11.6 Pattern service
 Reads `data/patterns.json` at boot. Tag-match + substring match over problem statement. Returns top 5 with a one-line "why this matches" from Haiku. No embeddings, no ranking, no promotion workflow in the POC.
@@ -230,7 +241,10 @@ Stores workspace-level defaults and room-level overrides. For the demo, it can s
 ### 11.8 Component catalog service
 Builds a workspace-local catalog of likely reusable components from evidence-first sources: `Cargo.toml`, workspace manifests, `package.json`, `pyproject.toml`, lockfiles, infra manifests, conventional repo paths (`crates/`, `packages/`, `services/`), and existing ADR Markdown. Produces candidate entries with file-path evidence and confidence. Humans can confirm or ignore entries; pure LLM-only discovery is not sufficient for POC truth.
 
-### 11.9 Agent gateway stub (v2)
+### 11.9 Revision service
+Materializes immutable `adr_revision`, `subdecision_revision`, and `plan_revision` snapshots from the event stream. Creates revisions on manual checkpoint, `submit_for_review`, approval, and conflict resolution. Supports replay, diffing, and approval provenance without making mutable draft rows the source of truth.
+
+### 11.10 Agent gateway stub (v2)
 A single registered endpoint and typed-delta ingest path. Present for schema completeness so v2 can ship without breaking changes. No capability negotiation, no remote runtimes in the POC.
 
 ## 12. Realtime Collaboration Model
@@ -479,6 +493,50 @@ This matters because the product is supposed to *handle* disagreement, not assum
 - If the ADR chooses a net-new component while a matching confirmed component exists, the ADR must record why reuse was rejected.
 - If the ADR intentionally breaks a soft guardrail, the rationale must be written down in `Tradeoffs` or `Consequences`.
 
+### 15.7 Historization and typed subdecisions
+
+The ADR has two layers:
+
+- a mutable working draft used during the live room
+- immutable `adr_revision` snapshots used for review, approval, replay, and comparison
+
+ADR revisions are created at:
+
+- manual checkpoint
+- `adr.submitted_for_review`
+- `adr.approved`
+- `subdecision.conflict.resolved`
+
+Every `adr_revision` stores:
+
+```json
+{
+  "id": "adr_rev_...",
+  "adr_id": "adr_...",
+  "revision_number": 7,
+  "parent_revision_id": "adr_rev_6",
+  "reason": "manual|review|approval|conflict_resolution",
+  "sections": { "context": "...", "decision": "...", "...": "..." },
+  "alignment_snapshot_id": "align_snap_...",
+  "guardrail_snapshot_id": "guardrails_snap_...",
+  "component_refs": ["comp_auth_service"],
+  "subdecision_revision_ids": ["subdec_lang_rev_3", "subdec_store_rev_5"],
+  "created_by": "user_123",
+  "created_at": "2026-04-18T12:00:00Z"
+}
+```
+
+Subdecisions are the bounded architectural choices inside the ADR that deserve their own history and conflict handling. Examples: runtime language, storage engine, queue strategy, deployment topology, rollout strategy. Wording edits, minor examples, and most narrative text are **not** subdecisions.
+
+Each `subdecision` has immutable `subdecision_revision`s. Writes must include `base_revision_id`.
+
+- If two edits touch disjoint fields or additive lists, the server may auto-merge and create a new revision.
+- If two edits touch the same semantic field, the server emits `subdecision.conflict.detected`.
+- Conflict resolution creates a new `subdecision_revision` that points at the conflicting parents.
+- ADR prose still uses section locks; only structured subdecision fields get built-in conflict resolution.
+
+This gives the product Google-Docs-like resilience only where the data is structured enough for the merge to be defensible.
+
 ## 16. Implementation Plan and Handoff
 
 ### 16.1 Generation
@@ -529,13 +587,13 @@ This granularity is deliberate: finer becomes project management, coarser stops 
 
 ### 16.5 Approval rules
 
-- The plan can only be generated from an approved ADR.
+- The plan can only be generated from an approved ADR revision.
 - Only decision owners formally approve the overall plan.
 - Approval requires unanimous approval from the current decision-owner set.
 - Approval requires every workstream to have an accepted owner, at least one deliverable, and at least one acceptance check.
 - Open implementation questions are allowed only when each question is attached to a workstream, has a named resolver, and has an explicit `due_before` checkpoint. Unowned "we'll figure it out later" questions block plan approval.
 - Approval requires every net-new component or hard-guardrail exception to carry explicit justification and a named owner for validation / follow-up.
-- Approval records the source ADR version and the plan snapshot used for approval.
+- Approval records the exact `source_adr_revision_id` and the plan snapshot used for approval.
 
 ### 16.6 Ownership and claims
 
@@ -543,7 +601,15 @@ Each workstream is claimable. Same lock semantics as ADR sections (§12.4). Clai
 
 ### 16.7 Handoff package
 
-The optional artifact — approved ADR + approved plan + referenced patterns + alignment snapshot — bundled as a single JSON payload plus a human-readable Markdown export. Consumers (human or agent team) get everything they need to start execution.
+The optional artifact — approved ADR revision + approved plan revision + referenced patterns + alignment snapshot — bundled as a single JSON payload plus a human-readable Markdown export. Consumers (human or agent team) get everything they need to start execution.
+
+### 16.8 Plan historization
+
+The implementation plan follows the same draft + immutable revision pattern as the ADR, but without subdecision-level conflict logic.
+
+- `plan_revision` is created on manual checkpoint, `plan.submitted_for_review`, and `plan.approved`
+- every plan revision stores `source_adr_revision_id`
+- plan text stays under section / workstream locks rather than CRDT merge
 
 ## 17. Core Domain Model
 
@@ -562,12 +628,17 @@ The optional artifact — approved ADR + approved plan + referenced patterns + a
 | `facilitator_update` | Shared synthesized update. `source_event_ids[]`, `supersedes?` |
 | `pattern` | Seeded library entry |
 | `adr` | Formal decision record, section-keyed |
-| `decision_approval` | Human approval + alignment snapshot |
-| `implementation_plan` | Derived from approved ADR, with explicit review state |
+| `adr_revision` | Immutable whole-ADR snapshot used for review, approval, and diff |
+| `subdecision` | Bounded architectural choice tracked inside an ADR |
+| `subdecision_revision` | Immutable revision of one structured subdecision |
+| `subdecision_conflict` | Explicit semantic conflict between competing subdecision revisions |
+| `decision_approval` | Human approval + alignment snapshot + approved revision pointers |
+| `implementation_plan` | Derived from an approved ADR revision, with explicit review state |
+| `plan_revision` | Immutable whole-plan snapshot with source ADR revision pointer |
 | `plan_item` | Workstream with owner proposal / acceptance state |
 | `plan_question` | Open implementation question with resolver + due checkpoint |
 | `ownership_claim` | Single-writer lock over an ADR section or plan item |
-| `implementation_package` | Handoff bundle |
+| `implementation_package` | Handoff bundle with approved ADR / plan revision pointers |
 | `event_log` | Append-only audit + replay stream |
 
 Every derived entity (`agent_delta`, `facilitator_update`, `alignment_node`) carries `source_event_ids[]` and optional `supersedes` so the three-layer signal flow is fully auditable and replayable.
@@ -602,17 +673,23 @@ adr.section.claimed               { section, claim_id, ttl_ms }
 adr.section.released              { section, reason: 'manual'|'timeout' }
 adr.section.overlap_warning       { section, attempted_by }
 adr.section.updated               { section, diff, claim_id }
-adr.submitted_for_review
-adr.approved                      { approver_ids[], decision_owner_ids[], alignment_snapshot_id }
+adr.revision.created              { adr_revision_id, revision_number, reason }
+adr.submitted_for_review          { adr_revision_id }
+subdecision.created               { subdecision_id, title, kind }
+subdecision.revision.created      { subdecision_id, subdecision_revision_id, base_revision_id }
+subdecision.conflict.detected     { subdecision_id, left_revision_id, right_revision_id, fields[] }
+subdecision.conflict.resolved     { subdecision_id, resolution_revision_id }
+adr.approved                      { approver_ids[], decision_owner_ids[], alignment_snapshot_id, adr_revision_id, subdecision_revision_ids[] }
 adr.dissent_recorded              { dissenter_id, source_node_id, text }
-plan.generated                    { plan_id, adr_id }
-plan.submitted_for_review
+plan.generated                    { plan_id, adr_id, source_adr_revision_id }
+plan.revision.created             { plan_revision_id, revision_number, reason, source_adr_revision_id }
+plan.submitted_for_review         { plan_revision_id }
 plan.updated                      { diff }
 plan_item.claimed                 { item_id, claim_id, ttl_ms }
 plan_item.released                { item_id, reason: 'manual'|'timeout' }
 plan_item.overlap_warning         { item_id, attempted_by }
 plan_item.owner_accepted          { item_id, owner_id }
-plan.approved                     { approver_ids[], source_adr_id }
+plan.approved                     { approver_ids[], source_adr_id, source_adr_revision_id, plan_revision_id }
 implementation.package.generated  { package_id }
 ```
 
@@ -693,6 +770,13 @@ POST /api/rooms/:id/adr/sections/:section/write  { diff }
 POST /api/rooms/:id/adr/submit
 POST /api/rooms/:id/adr/approve
 POST /api/rooms/:id/adr/dissent           { text }
+POST /api/rooms/:id/adr/checkpoints
+GET  /api/adrs/:adrId/revisions
+GET  /api/adrs/:adrId/revisions/:revisionId
+GET  /api/adrs/:adrId/subdecisions
+POST /api/adrs/:adrId/subdecisions
+POST /api/adrs/:adrId/subdecisions/:subdecisionId/write   { base_revision_id, patch }
+POST /api/adrs/:adrId/subdecisions/:subdecisionId/resolve-conflict
 POST /api/rooms/:id/plan/generate
 POST /api/rooms/:id/plan/submit
 POST /api/rooms/:id/plan/items/:itemId/claim
@@ -700,6 +784,8 @@ POST /api/rooms/:id/plan/items/:itemId/release
 POST /api/rooms/:id/plan/items/:itemId/accept-owner
 POST /api/rooms/:id/plan/items/:itemId/write
 POST /api/rooms/:id/plan/approve
+GET  /api/plans/:planId/revisions
+GET  /api/plans/:planId/revisions/:revisionId
 GET  /api/rooms/:id/package
 WS   /api/realtime
 ```
@@ -739,6 +825,12 @@ Human discussion | Facilitator stream | Alignment board | Pattern suggestions | 
 
 The perspective pane remains v2-only and does not ship as a room panel in the POC.
 
+The ADR draft pane should expose:
+
+- a revision timeline for whole-ADR checkpoints
+- a subdecision list for major architectural choices
+- explicit conflict badges when a subdecision needs human resolution
+
 ## 23. LLM Orchestration & Cost Model
 
 ### 23.1 Model routing
@@ -746,7 +838,7 @@ The perspective pane remains v2-only and does not ship as a room panel in the PO
 - **Classifier per utterance:** Claude Haiku 4.5 — fast, cheap, small prompt
 - **Facilitator synthesis:** Claude Sonnet 4.6 — better instruction-following on structured output
 - **ADR section draft:** Claude Sonnet 4.6 — one-shot, on demand
-- **Plan generation:** Claude Sonnet 4.6 — one-shot, on approved ADR
+- **Plan generation:** Claude Sonnet 4.6 — one-shot, on an approved ADR revision
 
 No routing to Opus in the POC. Opus can be A/B'd later for facilitator only.
 
@@ -799,22 +891,25 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 - Alignment board UI with 8 node types
 - Exit: a 10-minute scripted brainstorm produces a coherent alignment snapshot and ≤ 1 facilitator update per 10s
 
-### Phase 3 — ADR editor and approval (1–2 days)
+### Phase 3 — ADR editor and approval (2–3 days)
 - 12-section ADR model and editor
 - Section-level claim / release / auto-release (§12.4)
 - "Regenerate section" button → ADR compiler call
 - `decide`-mode gate on unresolved differences (§15.5)
 - Guardrail-conflict and reuse-justification gates
+- Immutable ADR revision snapshots on checkpoint / review / approval
+- Typed subdecision editor with optimistic concurrency and conflict resolution
 - Dissent recording flow
 - Approval with alignment snapshot
 - Exit: a room can end in an approved ADR, with a scripted dissent case working
 
-### Phase 4 — Plan editor and approval (1 day)
-- Plan generation from approved ADR
+### Phase 4 — Plan editor and approval (1–2 days)
+- Plan generation from an approved ADR revision
 - Workstream-level claim / release
 - Existing-component references and guardrail-exception fields per workstream
+- Immutable plan revision snapshots on checkpoint / review / approval
 - Approval gated on every workstream having an owner
-- Exit: approved ADR produces a reviewed plan with owners
+- Exit: an approved ADR revision produces a reviewed plan with owners
 
 ### Phase 5 — Decision context management (1 day)
 - `data/patterns.json` with ~10 entries
@@ -835,10 +930,10 @@ Deferred. See §19.
 ## 25. Testing Strategy
 
 ### Automated
-- Unit: alignment reducer, novelty hashing, claim TTL, dissent gate, guardrail gating, component scan normalization
-- Integration: room lifecycle, claim contention, WebSocket event ordering, component refresh, guardrail snapshotting
+- Unit: alignment reducer, novelty hashing, claim TTL, dissent gate, guardrail gating, component scan normalization, ADR revision creation, subdecision conflict detection
+- Integration: room lifecycle, claim contention, WebSocket event ordering, component refresh, guardrail snapshotting, revision replay from event log
 - Contract: facilitator output conforms to §13.4 schema on golden transcripts
-- UI: ADR approval flow, plan approval flow, owner-acceptance gating, ownership overlap warnings
+- UI: ADR approval flow, plan approval flow, owner-acceptance gating, ownership overlap warnings, subdecision conflict resolution
 
 ### Manual (scripted scenarios)
 - **S1:** two humans, one disagrees on an option → room enters `decide` mode → `draft_adr` is blocked until the room records dissent → approval with `dissent_recorded`
@@ -848,7 +943,9 @@ Deferred. See §19.
 - **S5:** post-session alignment check — participants independently restate problem, decision, key tradeoff, first workstream, and remaining open question / owner
 - **S6:** workspace with active guardrails ("Rust only", preferred libraries, banned tech) → facilitator surfaces conflicts and approval is blocked until the ADR / plan records an exception or switches options
 - **S7:** repo with a relevant existing component → component catalog surfaces it, and the plan either reuses it or explicitly justifies a net-new replacement
-- **S8:** baseline head-to-head (§3 goal 9) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers + the same participant alignment check in both conditions
+- **S8:** two humans edit different fields of the same subdecision from the same base revision → server auto-merges into a new subdecision revision
+- **S9:** two humans edit the same field of the same subdecision from the same base revision → `subdecision.conflict.detected` appears and requires explicit resolution
+- **S10:** baseline head-to-head (§3 goal 9) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers + the same participant alignment check in both conditions
 
 ### Alignment check protocol
 - Immediately after ADR + plan approval, each participant privately answers five prompts without looking at the exported artifact.
@@ -880,6 +977,8 @@ Primary:
 - Percent open implementation questions with resolver + checkpoint before handoff
 - Percent approved ADRs referencing confirmed existing components when relevant
 - Percent hard-guardrail exceptions with explicit justification
+- Percent approved ADRs with replayable revision history and linked subdecision revisions
+- Time to resolve a structured subdecision conflict
 - LLM cost per session
 
 Qualitative (from participants):
@@ -914,6 +1013,12 @@ Mitigation: evidence-first discovery only, visible file-path evidence, human con
 ### 27.8 Guardrails become invisible prompt lore instead of product behavior
 Mitigation: explicit guardrails panel, room snapshotting, facilitator conflict surfacing, and approval-time enforcement.
 
+### 27.9 Subdecision modeling becomes too granular and turns the room into paperwork
+Mitigation: restrict subdecisions to bounded architectural choices that merit independent history. Do not create them for prose-only edits, examples, or routine drafting.
+
+### 27.10 Built-in conflict handling creates false confidence
+Mitigation: allow automatic merge only for disjoint structured fields. Same-field changes always produce explicit human-resolved conflicts.
+
 ## 28. Known Dials (not open questions)
 
 These were "open questions" in v0.1. They are tunable parameters now.
@@ -925,6 +1030,7 @@ These were "open questions" in v0.1. They are tunable parameters now.
 - **Q5. Pattern ranking.** Tag + substring only (§14). Embeddings + ranking are v2.
 - **Q6. Plan granularity.** Workstreams, not tickets (§16.3). If users complain it's too coarse, add a "break down" action that expands one workstream into sub-items.
 - **Q7. Component discovery confidence threshold.** Default: only `confirmed` components participate in approval gating. Candidate-only matches remain advisory.
+- **Q8. Subdecision threshold.** Default: create subdecisions only for architectural choices likely to change independently or deserve explicit conflict handling.
 
 ## 29. Recommended Build Order
 
@@ -954,6 +1060,7 @@ What this is **not** reinventing, and why it is still different:
 
 The differentiators we are betting on: **one facilitator voice**, **three-layer signal model**, **frozen alignment taxonomy**, **section-level single-writer locks**, and **ADR-as-decision-boundary**.
 The supporting advantage is that the room starts with explicit context: known guardrails and reusable components, not just opinions and generated text.
+The history advantage is that the room preserves immutable ADR revisions and typed subdecision revisions instead of flattening everything into one mutable document.
 
 ## 31. Final Recommendation
 
@@ -966,6 +1073,7 @@ Treat the first draft as a focused product experiment:
 - one explicit guardrail layer (workspace defaults + room overrides)
 - one evidence-backed component catalog (autodiscovered, then human-confirmed)
 - one ADR as the decision artifact (12 sections, dissent-aware)
+- immutable ADR revisions plus typed subdecision revisions
 - one implementation plan (workstream-level, owner-accepted, open-question-triaged)
 - one live ownership model (section-level single-writer locks)
 - one optional handoff package
