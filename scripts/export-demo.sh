@@ -32,6 +32,38 @@ derive_github_pages_url() {
   return 1
 }
 
+# Derive the absolute URL path where the Slidev SPA will live, e.g.
+# /codex-hackathon-26-vienna/demo/slides/ for a project site. Slidev is a Vue
+# Router SPA — if we build it with `--base ./`, the router can't strip the
+# hosting subpath and shows its own "Page not found" for the very URL that
+# just loaded it. The base MUST match the actual URL path segment.
+derive_slides_base() {
+  # Explicit override wins — useful for custom-domain deploys or forks.
+  if [[ -n "${EXPORT_DEMO_SLIDES_BASE:-}" ]]; then
+    printf '%s\n' "${EXPORT_DEMO_SLIDES_BASE}"
+    return 0
+  fi
+
+  local remote
+  remote="$(git -C "$ROOT_DIR" remote get-url origin 2>/dev/null || true)"
+
+  local repo=""
+  if [[ "$remote" =~ ^git@github\.com:[^/]+/([^/.]+)(\.git)?$ ]]; then
+    repo="${BASH_REMATCH[1]}"
+  elif [[ "$remote" =~ ^https://github\.com/[^/]+/([^/.]+)(\.git)?$ ]]; then
+    repo="${BASH_REMATCH[1]}"
+  fi
+
+  # A user/organization site (<user>.github.io) serves from /, so the slides
+  # live at /demo/slides/. A project site serves from /<repo>/, so the slides
+  # live at /<repo>/demo/slides/.
+  if [[ -z "$repo" || "$repo" == *.github.io ]]; then
+    printf '/demo/slides/\n'
+  else
+    printf '/%s/demo/slides/\n' "$repo"
+  fi
+}
+
 cleanup() {
   if [[ -n "$DEV_PID" ]]; then
     kill "$DEV_PID" 2>/dev/null || true
@@ -106,8 +138,9 @@ cp "$SHORT_VIDEO" "$EMBEDDED_DECK_VIDEO"
 rm -rf "$SLIDES_OUT" "$VIDEOS_OUT"
 mkdir -p "$VIDEOS_OUT"
 
-echo "• Building Slidev deck for portable hosting"
-(cd "$ROOT_DIR/slides" && bun x slidev build --base ./ --out ../docs/demo/slides)
+SLIDES_BASE="$(derive_slides_base)"
+echo "• Building Slidev deck for portable hosting (base: $SLIDES_BASE)"
+(cd "$ROOT_DIR/slides" && bun x slidev build --base "$SLIDES_BASE" --out ../docs/demo/slides)
 
 cp "$SHORT_VIDEO" "$VIDEOS_OUT/realtime-alignment.mp4"
 cp "$LONG_VIDEO" "$VIDEOS_OUT/realtime-alignment-long.mp4"
