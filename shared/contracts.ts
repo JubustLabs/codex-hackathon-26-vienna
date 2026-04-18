@@ -256,6 +256,10 @@ export interface RoomSnapshot {
     participantId: string;
     message: string;
     createdAt: string;
+    /** "conflict" items ask the participant to resolve an inconsistency
+     *  (an overlapped claim, recorded dissent, …). Absent or "orchestrator"
+     *  means a routine nudge from the synthesis step. */
+    kind?: "orchestrator" | "conflict";
   }>;
   adr: {
     id: string;

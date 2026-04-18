@@ -60,9 +60,12 @@ function summarizeNodes(snapshot: RoomSnapshot, type: AlignmentNode["type"]) {
     .slice(0, 3);
 }
 
-function isCookieDemo(snapshot: RoomSnapshot) {
+function isSupportAgentDemo(snapshot: RoomSnapshot) {
   const topic = snapshot.room.topic.toLowerCase();
-  return topic.includes("cookie") || snapshot.room.topicTags.includes("cookies");
+  return (
+    topic.includes("support agent") ||
+    snapshot.room.topicTags.includes("support-agent")
+  );
 }
 
 function defaultSectionDraft(snapshot: RoomSnapshot, section: AdrSectionKey) {
@@ -108,59 +111,98 @@ function buildPlan(snapshot: RoomSnapshot): GeneratedPlan {
   const reusable = components.map((component) => component.title);
   const firstOwnerId = decisionOwners[0]?.id ?? snapshot.participants[0]?.id ?? null;
 
-  if (isCookieDemo(snapshot)) {
+  if (isSupportAgentDemo(snapshot)) {
+    const marketingOwner = decisionOwners[0]?.id ?? firstOwnerId;
+    const supportOwner = decisionOwners[1]?.id ?? firstOwnerId;
+    const itOwner =
+      decisionOwners[2]?.id ??
+      snapshot.participants.find((p) => !snapshot.room.decisionOwnerIds.includes(p.id))?.id ??
+      firstOwnerId;
     const workstreams: Workstream[] = [
       {
         id: crypto.randomUUID(),
         planId,
-        title: "Bake a tiny test batch",
-        description: "Bake a small plate of classic chocolate chip cookies so everyone can confirm the choice still feels right.",
-        suggestedOwnerId: firstOwnerId,
-        ownerStatus: "proposed",
-        size: "S",
-        dependsOn: [],
-        deliverables: ["Small test batch", "Quick taste check", "One yes/no decision after tasting"],
-        acceptanceChecks: ["Alice and Bob still want classic chocolate chip", "The cookies taste familiar and chocolatey"],
-        componentRefs: [],
-        guardrailExceptions: [],
-        firstStep: "Mix enough dough for one tray and bake six cookies.",
-        rolloutNotes: "If the taste is off, adjust the chocolate amount before the big batch.",
-        openQuestions: [],
-        patternRefs: snapshot.patterns.slice(0, 1).map((pattern) => pattern.id),
-      },
-      {
-        id: crypto.randomUUID(),
-        planId,
-        title: "Prepare the bake sale batch",
-        description: "Buy the ingredients and bake one full batch of the chosen cookie flavor.",
-        suggestedOwnerId: decisionOwners[1]?.id ?? firstOwnerId,
+        title: "DLP gateway + managed LLM wiring",
+        description:
+          "Stand up the DLP gateway in front of the managed LLM so no customer PII ever reaches the provider. Covers auth, logging, and the redaction ruleset.",
+        suggestedOwnerId: itOwner,
         ownerStatus: "proposed",
         size: "M",
         dependsOn: [],
-        deliverables: ["Ingredient list", "Full cookie batch", "Cooling rack ready"],
-        acceptanceChecks: ["There are enough cookies for the table", "The batch matches the tested flavor"],
+        deliverables: [
+          "DLP gateway deployed to staging",
+          "Redaction ruleset for email, phone, order-id, CC fragments",
+          "Audit log stream into the existing SIEM",
+        ],
+        acceptanceChecks: [
+          "Every outbound prompt is redacted before it leaves our edge",
+          "Failing a redaction rule blocks the response with a visible error",
+          "SOC 2 reviewer signs off on the gateway diagram",
+        ],
         componentRefs: [],
         guardrailExceptions: [],
-        firstStep: "Write the ingredient list for classic chocolate chip and check the pantry.",
-        rolloutNotes: "Keep the recipe simple so the flavor stays familiar.",
+        firstStep:
+          "Fork the existing egress proxy config, bolt on the redaction middleware, and point one staging route through it.",
+        rolloutNotes:
+          "No production traffic until IT sign-off. Staging cutover first, with full logging on.",
         openQuestions: [],
         patternRefs: snapshot.patterns.slice(0, 1).map((pattern) => pattern.id),
       },
       {
         id: crypto.randomUUID(),
         planId,
-        title: "Label and share the choice",
-        description: "Make the final choice easy to understand with a simple sign and one short explanation.",
-        suggestedOwnerId: decisionOwners[2]?.id ?? firstOwnerId,
+        title: "Scripted top-10 FAQs + LLM fallback",
+        description:
+          "Author the scripted answers for the top-10 support FAQs, wire LLM fallback behind a confidence threshold, and make every response cite its source.",
+        suggestedOwnerId: supportOwner,
+        ownerStatus: "proposed",
+        size: "M",
+        dependsOn: [],
+        deliverables: [
+          "Scripted answers for the 10 highest-volume FAQs",
+          "Confidence threshold (default 0.7) that gates LLM fallback",
+          "Handoff packet containing the full redacted transcript + context",
+        ],
+        acceptanceChecks: [
+          "Scripted answers resolve > 60% of shadow-mode transcripts",
+          "When confidence < 0.7, the agent hands off within 2 minutes",
+          "Support managers can review the top 20 disagreements weekly",
+        ],
+        componentRefs: [],
+        guardrailExceptions: [],
+        firstStep:
+          "Pull the last 90 days of ticket subjects, cluster into the top-10 FAQs, and draft scripted answers with Support leads.",
+        rolloutNotes:
+          "Shadow mode first — agent drafts responses but a human still sends them for one full week before real replies.",
+        openQuestions: [],
+        patternRefs: snapshot.patterns.slice(0, 1).map((pattern) => pattern.id),
+      },
+      {
+        id: crypto.randomUUID(),
+        planId,
+        title: "Pricing + docs launch + deflection metric",
+        description:
+          "Ship the agent surface on pricing and docs pages, publish the deflection metric dashboard marketing will report on, and instrument the rollout so we can cut it quickly if it misbehaves.",
+        suggestedOwnerId: marketingOwner,
         ownerStatus: "proposed",
         size: "S",
         dependsOn: [],
-        deliverables: ["Cookie label sign", "One-sentence flavor reason", "Bake sale table setup"],
-        acceptanceChecks: ["A child can read the sign and know what the flavor is", "The table shows one clear choice"],
+        deliverables: [
+          "Agent widget live on pricing + docs pages (behind a kill-switch)",
+          "Deflection-rate dashboard (deflected / total shown)",
+          "A one-pager marketing can share publicly",
+        ],
+        acceptanceChecks: [
+          "Kill-switch hides the widget within 30s globally",
+          "Dashboard shows deflection rate split by page",
+          "Support CSAT does not regress during the first week",
+        ],
         componentRefs: [],
         guardrailExceptions: [],
-        firstStep: "Write a sign that says 'Classic Chocolate Chip' and one sentence about why it won.",
-        rolloutNotes: "Keep the wording short and cheerful.",
+        firstStep:
+          "Gate the widget behind a feature flag with marketing, support, and IT all listed as flag owners.",
+        rolloutNotes:
+          "Start at 10% of pricing + docs traffic; ramp to 100% only after the first weekly CSAT review.",
         openQuestions: [],
         patternRefs: snapshot.patterns.slice(0, 1).map((pattern) => pattern.id),
       },
@@ -169,17 +211,29 @@ function buildPlan(snapshot: RoomSnapshot): GeneratedPlan {
     return {
       planId,
       sections: {
-        summary: "This alignment plan turns the cookie choice into a small set of easy next steps.",
-        workstreams: workstreams.map((item) => `${item.title} (${item.size})`).join("\n"),
-        sequence_and_dependencies: "Taste a tiny batch first, then bake the big batch, then label the final choice for the table.",
-        deliverables_and_acceptance_checks: workstreams
-          .map((item) => `${item.title}: ${item.deliverables.join(", ")} | checks: ${item.acceptanceChecks.join(", ")}`)
+        summary:
+          "Three workstreams, one per department, that together ship the agent safely: IT builds the DLP+LLM plumbing, Support authors the scripted answers and fallback rules, Marketing ships the pricing/docs surface and the deflection dashboard.",
+        workstreams: workstreams
+          .map((item) => `${item.title} (${item.size})`)
           .join("\n"),
-        open_implementation_questions: "No open questions yet.",
-        existing_components_to_reuse: "Use the same simple cookie recipe for both the test batch and the final batch.",
-        pattern_references: "Keep one clear choice visible so nobody wonders which cookie won.",
-        guardrail_exceptions: "No guardrail exceptions proposed.",
-        risks_and_rollout_notes: "Watch for the test batch feeling too plain or too sweet before baking the full tray.",
+        sequence_and_dependencies:
+          "IT finishes the DLP gateway first. Support authors scripted FAQs in parallel but ships only after the gateway is live. Marketing turns on the pricing/docs surface last, behind a kill-switch, once both upstream workstreams are green.",
+        deliverables_and_acceptance_checks: workstreams
+          .map(
+            (item) =>
+              `${item.title}: ${item.deliverables.join(", ")} | checks: ${item.acceptanceChecks.join(", ")}`,
+          )
+          .join("\n"),
+        open_implementation_questions:
+          "Do we self-host the embedding model for FAQ retrieval, or reuse the managed provider's? Who owns the weekly CSAT review meeting?",
+        existing_components_to_reuse:
+          "Edge egress proxy for the DLP gateway\nFeature-flag service for the pricing/docs kill-switch\nSIEM stream for audit logs",
+        pattern_references:
+          "Deflect-then-escalate · Scoped rollout · Handoff-with-context · Feature-flag kill-switch",
+        guardrail_exceptions:
+          "None — the decision deliberately stays inside current guardrails (DLP, SOC 2, feature-flag kill-switch).",
+        risks_and_rollout_notes:
+          "LLM hallucinations on product-specific questions → mitigated by scripted-first and low-confidence handoff. DLP misses → mitigated by audit-log review in week 1. CSAT regression → mitigated by the 10% → 100% ramp gated on the weekly review.",
       },
       workstreams,
     };

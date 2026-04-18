@@ -599,6 +599,16 @@ a.list-card:hover, .list-card:hover {
   border-left: 3px solid var(--accent);
   background: linear-gradient(135deg, rgba(47, 105, 209, 0.08), rgba(252, 254, 255, 0.9));
 }
+.routed-card.conflict-ping {
+  border-left-color: var(--warn);
+  background: linear-gradient(135deg, rgba(182, 122, 24, 0.14), rgba(252, 254, 255, 0.9));
+  animation: conflict-pulse 2.4s var(--ease) infinite;
+}
+.routed-card.conflict-ping strong { color: var(--warn); }
+@keyframes conflict-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(182, 122, 24, 0.0); }
+  50%      { box-shadow: 0 0 0 6px rgba(182, 122, 24, 0.08); }
+}
 
 .summary-strip,
 .summary-stack,

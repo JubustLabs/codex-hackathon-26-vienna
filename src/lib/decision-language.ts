@@ -1,4 +1,4 @@
-import type { AdrSectionKey, RoomMode } from "@shared/contracts";
+import { adrSectionOrder, type AdrSectionKey, type RoomMode } from "@shared/contracts";
 
 export const roomModeLabels: Record<RoomMode, string> = {
   explore: "explore",
@@ -48,4 +48,36 @@ export function firstFilledLine(...values: Array<string | null | undefined>) {
     }
   }
   return "";
+}
+
+// Sections that read better as a bulleted list when the author split them
+// across multiple lines (options, tradeoffs, risks, …). Single-line values
+// still render as a plain paragraph regardless of this set.
+const BULLETED_SECTIONS: ReadonlySet<AdrSectionKey> = new Set([
+  "options_considered",
+  "tradeoffs",
+  "consequences",
+  "related_patterns",
+  "approvers",
+]);
+
+export function buildAdrMarkdown(adr: {
+  status: string;
+  sections: Record<AdrSectionKey, string>;
+}): string {
+  const title = firstFilledLine(adr.sections.title) || "Shared decision";
+  const lines: string[] = [`# ${title}`, "", `**Status:** ${String(adr.status).replaceAll("_", " ")}`];
+  for (const section of adrSectionOrder) {
+    if (section === "title" || section === "status") continue;
+    const body = adr.sections[section]?.trim();
+    if (!body) continue;
+    lines.push("", `## ${labelDecisionSection(section)}`, "");
+    const parts = splitDecisionText(body);
+    if (BULLETED_SECTIONS.has(section) && parts.length > 1) {
+      for (const part of parts) lines.push(`- ${part}`);
+    } else {
+      lines.push(parts.join("\n\n"));
+    }
+  }
+  return `${lines.join("\n")}\n`;
 }

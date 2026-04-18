@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Realtime Alignment Demo Export</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef5ff;
+      --panel: rgba(255, 255, 255, 0.88);
+      --ink: #12304a;
+      --muted: #4d6780;
+      --line: rgba(18, 48, 74, 0.12);
+      --accent: #1f6fb2;
+      --accent-soft: rgba(31, 111, 178, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(31, 111, 178, 0.18), transparent 30rem),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+    }
+
+    main {
+      width: min(1100px, calc(100vw - 2rem));
+      margin: 0 auto;
+      padding: 3rem 0 4rem;
+    }
+
+    .hero {
+      padding: 2rem;
+      border: 1px solid var(--line);
+      border-radius: 1.5rem;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 24px 60px rgba(22, 45, 78, 0.12);
+    }
+
+    h1, h2 {
+      margin: 0;
+      font-family: "Fraunces", "Georgia", serif;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      line-height: 0.95;
+    }
+
+    h2 {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .hero p {
+      max-width: 52rem;
+      margin-top: 1rem;
+      font-size: 1.05rem;
+    }
+
+    .hint {
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.75rem;
+      padding: 0 1rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .actions a.secondary {
+      border-color: var(--line);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      padding: 1.25rem;
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      background: var(--panel);
+      box-shadow: 0 18px 40px rgba(22, 45, 78, 0.08);
+    }
+
+    .stack {
+      display: grid;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    video {
+      width: 100%;
+      display: block;
+      margin-top: 1rem;
+      border-radius: 1rem;
+      background: #0e2235;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    code {
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.35rem;
+      background: rgba(18, 48, 74, 0.08);
+      color: var(--ink);
+      font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+      font-size: 0.95em;
+    }
+
+    @media (max-width: 700px) {
+      main {
+        width: min(100vw - 1rem, 100%);
+        padding-top: 1rem;
+      }
+
+      .hero,
+      .card {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Realtime Alignment Demo Export</h1>
+      <p>Portable demo artifacts for GitHub Pages: the hosted slide deck, the short pitch video, the long walkthrough video, and a repo-friendly index page that links everything from one place.</p>
+      <p class="hint">Expected GitHub Pages URL: <a href="https://jubustlabs.github.io/codex-hackathon-26-vienna/demo/">https://jubustlabs.github.io/codex-hackathon-26-vienna/demo/</a></p>
+      <div class="actions">
+        <a href="./slides/index.html">Open Slides</a>
+        <a class="secondary" href="./videos/realtime-alignment.mp4">Download Short Video</a>
+        <a class="secondary" href="./videos/realtime-alignment-long.mp4">Download Long Video</a>
+      </div>
+    </section>
+
+    <section class="stack">
+      <div class="grid">
+        <article class="card">
+          <h2>Slides</h2>
+          <p>The exported Slidev deck is rebuilt with a relative base so it can live cleanly under <code>docs/demo/slides/</code> on GitHub Pages.</p>
+          <div class="actions">
+            <a href="./slides/index.html">Launch Deck</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Artifacts</h2>
+          <p>Every export lives beside this page so the links remain stable in both local previews and project-site hosting.</p>
+          <div class="actions">
+            <a class="secondary" href="./README.md">Open README</a>
+          </div>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2>Short Video</h2>
+        <p>The concise pitch cut used in the deck and on the landing page.</p>
+        <video controls playsinline preload="metadata" poster="./videos/thumbnail.png">
+          <source src="./videos/realtime-alignment.mp4" type="video/mp4">
+        </video>
+      </article>
+
+      <article class="card">
+        <h2>Long Video</h2>
+        <p>The extended walkthrough with the recorded autopilot sequence.</p>
+        <video controls playsinline preload="metadata" poster="./videos/thumbnail.png">
+          <source src="./videos/realtime-alignment-long.mp4" type="video/mp4">
+        </video>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

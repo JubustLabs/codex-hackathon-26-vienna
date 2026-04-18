@@ -506,6 +506,16 @@ export class AppStore {
           text: dissentText,
         },
       );
+      const room = this.requireRoom(roomId);
+      for (const ownerId of room.decisionOwnerIds) {
+        if (ownerId === actorId) continue;
+        this.pingParticipant(
+          roomId,
+          ownerId,
+          `${actor.displayName} recorded dissent: "${dissentText}". The shared decision is back to draft — please resolve the inconsistency.`,
+          "conflict",
+        );
+      }
       return null;
     }
 
@@ -544,6 +554,19 @@ export class AppStore {
           : "plan_item.overlap_warning",
         `${scopeType} ${scopeId} is already claimed`,
         { scopeId, attemptedBy: actorId, currentOwnerId: existing.ownerId },
+      );
+      const scopeLabel = scopeType === "adr_section" ? "decision section" : "plan item";
+      this.pingParticipant(
+        roomId,
+        existing.ownerId,
+        `${actor.displayName} tried to edit the ${scopeLabel} "${scopeId}" while you hold it — please reconcile or release.`,
+        "conflict",
+      );
+      this.pingParticipant(
+        roomId,
+        actorId,
+        `The ${scopeLabel} "${scopeId}" is already claimed. We've pinged the current owner so you can reconcile.`,
+        "conflict",
       );
       throw new Error("This section is already claimed.");
     }
@@ -1167,20 +1190,7 @@ export class AppStore {
       "INSERT INTO orchestrator_updates (id, room_id, json) VALUES (?, ?, ?)",
     ).run(update.id, roomId, JSON.stringify(update));
     for (const item of targetedFeedback) {
-      const routingItem = {
-        id: crypto.randomUUID(),
-        participantId: item.participantId,
-        message: item.message,
-        createdAt: nowIso(),
-      };
-      db.prepare(
-        "INSERT INTO routing_items (id, room_id, participant_id, json) VALUES (?, ?, ?, ?)",
-      ).run(
-        routingItem.id,
-        roomId,
-        item.participantId,
-        JSON.stringify(routingItem),
-      );
+      this.pingParticipant(roomId, item.participantId, item.message, "orchestrator");
     }
     this.recordEvent(
       roomId,
@@ -1265,6 +1275,27 @@ export class AppStore {
       throw new Error("Room not found.");
     }
     return parseJson<RoomSummary>(row.json);
+  }
+
+  /** Drop a routed item on a participant's private feed. Used for both
+   *  orchestrator nudges and conflict pings (overlapped claims, dissent). */
+  private pingParticipant(
+    roomId: string,
+    participantId: string,
+    message: string,
+    kind: "orchestrator" | "conflict",
+  ) {
+    if (!participantId || !message.trim()) return;
+    const routingItem = {
+      id: crypto.randomUUID(),
+      participantId,
+      message,
+      createdAt: nowIso(),
+      kind,
+    };
+    db.prepare(
+      "INSERT INTO routing_items (id, room_id, participant_id, json) VALUES (?, ?, ?, ?)",
+    ).run(routingItem.id, roomId, participantId, JSON.stringify(routingItem));
   }
 
   private requireAdr(roomId: string) {

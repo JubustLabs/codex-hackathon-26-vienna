@@ -144,6 +144,11 @@ slides-build: ensure-slides ensure-slide-video
 slides-export: ensure-slides ensure-slide-video
   cd slides && bun run export
 
+# Build the short video, long video, and slides static site, then export them
+# into docs/demo/ with a GitHub Pages-friendly index.
+export-demo: ensure-video ensure-slides
+  bash scripts/export-demo.sh
+
 # --- integrated demo pipeline --------------------------------------------
 
 # Fresh interactive demo: clean DB, create a room, spawn the app and two local agent bridges in tmux.

@@ -51,8 +51,8 @@ function parseArgs(argv: string[]): Args {
   return {
     server: map.get("server") ?? "http://localhost:3001",
     appUrl: map.get("app-url") ?? "http://localhost:5173",
-    durationSec: Number(map.get("duration") ?? "90"),
-    tempo: Number(map.get("tempo") ?? "3200"),
+    durationSec: Number(map.get("duration") ?? "120"),
+    tempo: Number(map.get("tempo") ?? "2400"),
     leadInMs: Number(map.get("lead-in") ?? "3500"),
     tailOutMs: Number(map.get("tail-out") ?? "2500"),
   };
@@ -87,24 +87,37 @@ async function createRoomAndParticipants() {
   const room = await apiJson<{ id: string }>(`${args.server}/api/rooms`, {
     method: "POST",
     body: JSON.stringify({
-      topic: "Chocolate cookie flavor",
-      decision: "Which chocolate cookie flavor should we choose for the bake sale?",
-      goal: "Pick one cookie flavor that feels easy, tasty, and obvious to explain.",
-      nonGoals: "Fancy baking techniques, nutrition debates, or offering many flavors at once.",
-      scope: "One simple choice between classic chocolate chip, double chocolate, and chocolate-orange.",
-      successBar: "Anyone can see the options, the tradeoffs, and the final choice in under a minute.",
-      topicTags: ["cookies", "chocolate", "kids", "demo"],
+      topic: "Website support agent",
+      decision:
+        "Ship a customer support agent on the website — what does it do on day one?",
+      goal: "One cross-functional scope that marketing, support, and IT all agree on before any code ships.",
+      nonGoals:
+        "Handling authenticated checkout flows, replacing Tier-2 support, or changing our CRM of record.",
+      scope:
+        "An AI agent that answers the top-10 FAQs on pricing + docs pages and hands off to a human with full context within 2 minutes.",
+      successBar:
+        "Marketing sees a deflection metric, Support trusts the escalation path, IT signs off on the data/security posture — all without a follow-up meeting.",
+      topicTags: ["support-agent", "marketing", "support", "it", "demo"],
     }),
   });
-  const alice = await apiJson<{ id: string }>(`${args.server}/api/rooms/${room.id}/join`, {
+  const marketing = await apiJson<{ id: string }>(`${args.server}/api/rooms/${room.id}/join`, {
     method: "POST",
-    body: JSON.stringify({ displayName: "Alice", role: "decision_owner" }),
+    body: JSON.stringify({ displayName: "Maya (Marketing)", role: "decision_owner" }),
   });
-  const bob = await apiJson<{ id: string }>(`${args.server}/api/rooms/${room.id}/join`, {
+  const support = await apiJson<{ id: string }>(`${args.server}/api/rooms/${room.id}/join`, {
     method: "POST",
-    body: JSON.stringify({ displayName: "Bob", role: "contributor" }),
+    body: JSON.stringify({ displayName: "Sam (Support)", role: "decision_owner" }),
   });
-  return { roomId: room.id, aliceId: alice.id, bobId: bob.id };
+  const it = await apiJson<{ id: string }>(`${args.server}/api/rooms/${room.id}/join`, {
+    method: "POST",
+    body: JSON.stringify({ displayName: "Ivo (IT)", role: "contributor" }),
+  });
+  return {
+    roomId: room.id,
+    marketingId: marketing.id,
+    supportId: support.id,
+    itId: it.id,
+  };
 }
 
 async function main() {
@@ -114,7 +127,7 @@ async function main() {
   await waitForServer();
   console.log("• server is up");
 
-  const { roomId, aliceId, bobId } = await createRoomAndParticipants();
+  const { roomId, marketingId, supportId, itId } = await createRoomAndParticipants();
   console.log(`• room=${roomId}`);
 
   await mkdir(PUBLIC_DIR, { recursive: true });
@@ -133,8 +146,8 @@ async function main() {
   });
   const page = await context.newPage();
 
-  const aliceUrl = `${args.appUrl}/rooms/${roomId}?participantId=${aliceId}`;
-  await page.goto(aliceUrl, { waitUntil: "networkidle" });
+  const ownerUrl = `${args.appUrl}/rooms/${roomId}?participantId=${marketingId}`;
+  await page.goto(ownerUrl, { waitUntil: "networkidle" });
   await page.waitForTimeout(args.leadInMs);
 
   console.log("• launching autopilot subprocess");
@@ -146,10 +159,12 @@ async function main() {
       args.server,
       "--room-id",
       roomId,
-      "--alice-id",
-      aliceId,
-      "--bob-id",
-      bobId,
+      "--marketing-id",
+      marketingId,
+      "--support-id",
+      supportId,
+      "--it-id",
+      itId,
       "--tempo",
       String(args.tempo),
     ],
@@ -160,12 +175,57 @@ async function main() {
     autopilot.on("exit", () => resolve());
   });
 
+  // Scrolling the captured page in sync with the autopilot phases. Without
+  // this the browser stays pinned at the top and the ADR / plan / handoff
+  // panels (which live further down the center column) never appear in the
+  // recording. Scrolls use `h2:has-text(...)` on the stable panel headings.
+  const scrollScript = async () => {
+    const scrollTo = async (selectorText: string, block: "start" | "center" = "start") => {
+      try {
+        const locator = page.locator(`h2:has-text("${selectorText}")`).first();
+        await locator.scrollIntoViewIfNeeded({ timeout: 2000 });
+        // nudge upward so the heading isn't pinned against the top edge
+        if (block === "start") {
+          await page.evaluate(() => window.scrollBy({ top: -80, left: 0, behavior: "smooth" }));
+        }
+      } catch {
+        // selector may not exist yet (phase not reached) — safe to skip
+      }
+    };
+
+    const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+    // t ≈ 0–25s: stay at the top so the alignment board is in view while
+    // utterances + private deltas + promotes happen.
+    await wait(26_000);
+    // t ≈ 26s: synthesis has published — pan down to orchestrator + shared
+    // decision area so viewers see sections being claimed + drafted.
+    await scrollTo("Shared decision draft");
+    await wait(28_000);
+    // t ≈ 54s: shared decision approved, plan about to generate. Pull the
+    // alignment plan panel into view.
+    await scrollTo("Alignment plan");
+    await wait(24_000);
+    // t ≈ 78s: plan approved, handoff being generated. Nudge further so the
+    // "Create handoff" button + result are visible.
+    await page.evaluate(() => window.scrollBy({ top: 320, left: 0, behavior: "smooth" }));
+    await wait(12_000);
+    // Brief pull back to the top for the outro so the full room frames the
+    // closing shot.
+    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "smooth" }));
+  };
+
+  const scrollTask = scrollScript().catch((error) => {
+    console.log(`• scroll orchestration error: ${error instanceof Error ? error.message : String(error)}`);
+  });
+
   const totalMs = args.durationSec * 1000;
   const deadline = Promise.race([
     autopilotExit.then(() => new Promise<void>((r) => setTimeout(r, args.tailOutMs))),
     new Promise<void>((r) => setTimeout(r, totalMs)),
   ]);
   await deadline;
+  await Promise.race([scrollTask, new Promise<void>((r) => setTimeout(r, 500))]);
 
   if (autopilot.exitCode === null) {
     console.log("• autopilot still running past deadline — killing");

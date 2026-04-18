@@ -151,6 +151,41 @@ Assists — never decides. **Humans stay in the loop.**
 </div>
 
 ---
+
+# MCP bridge — local context, shared room
+
+<div class="ra-grid-2 mt-6">
+
+<div>
+
+Each person runs a tiny **MCP server** next to their local codex.<br/>
+It streams private deltas — IDE tabs, drafts, notes — into the shared API, and lets the room push targeted nudges back.
+
+<v-clicks>
+
+- **Realtime** — deltas arrive over WebSockets; the alignment board re-synthesizes in sub-second
+- **Conflict resolution** — when two people touch the same section, the system claims one owner and **pings the other** to resolve
+- **Guardrails** — private work stays private until a human promotes it · approved decisions ratchet forward, never silently rewritten
+
+</v-clicks>
+
+</div>
+
+<div class="ra-card">
+
+**Customer-service agent demo**
+
+- *Maya (Marketing)* drafts in her IDE; her MCP bridge surfaces the pricing-page copy
+- *Sam (Support)* pastes a ticket cluster; MCP redacts PII before it reaches the room
+- *Ivo (IT)* pulls the current DLP rules; MCP attaches them as a constraint node
+
+Three departments converge to one shared decision **without a single status meeting.**
+
+</div>
+
+</div>
+
+---
 layout: center
 ---
 

@@ -8,31 +8,54 @@ import { clamp } from "../lib/motion";
 type Caption = { at: number; hold: number; kicker: string; body: string };
 
 const CAPTIONS: Caption[] = [
-  { at: 0, hold: 6, kicker: "STEP 1 · HUMAN", body: "Alice & Bob state the decision in the room." },
-  { at: 8, hold: 6, kicker: "STEP 2 · PRIVATE AGENT", body: "Each local codex drops a delta only its owner sees." },
-  { at: 16, hold: 6, kicker: "STEP 3 · PROMOTE", body: "Humans promote the good deltas. Nothing leaks on its own." },
-  { at: 24, hold: 6, kicker: "STEP 4 · SYNTHESIS", body: "Orchestrator re-anchors the room to one shared picture." },
-  { at: 32, hold: 10, kicker: "STEP 5 · DECISION", body: "Every section claimed, drafted, reviewed — not a noisy transcript." },
-  { at: 46, hold: 10, kicker: "STEP 6 · PLAN", body: "Workstreams, owners, first step — ready for execution." },
-  { at: 58, hold: 12, kicker: "STEP 7 · HANDOFF", body: "One JSON envelope. One decision, not four divergent ones." },
+  { at: 0, hold: 7, kicker: "STEP 1 · HUMANS", body: "Marketing, support & IT state the decision in the room." },
+  { at: 9, hold: 6, kicker: "STEP 2 · PRIVATE AGENT", body: "Each department's local codex drops a delta only its owner sees." },
+  { at: 17, hold: 6, kicker: "STEP 3 · PROMOTE", body: "Humans promote the good deltas. Nothing leaks on its own." },
+  { at: 25, hold: 5, kicker: "STEP 4 · SYNTHESIS", body: "Orchestrator re-anchors the three departments to one shared picture." },
+  { at: 32, hold: 18, kicker: "STEP 5 · DECISION", body: "Every section claimed, drafted, reviewed — not a noisy transcript." },
+  { at: 52, hold: 10, kicker: "STEP 6 · PLAN", body: "Workstreams, owners, first step — ready for execution." },
+  { at: 64, hold: 8, kicker: "STEP 7 · HANDOFF", body: "One JSON envelope. One decision, not three divergent ones." },
 ];
 
-// Camera waypoints for a Ken-Burns pan across the captured room UI so the
-// viewer can actually see what's happening. focusX/Y are normalized (0..1)
-// positions on the captured frame (0.5, 0.5 = dead center). The room layout is
-// a three-column grid — left rail ≈ 0.0–0.18, center ≈ 0.18–0.82, right rail
-// ≈ 0.82–1.0 — so pans target the column where the active UI element lives.
+// Camera waypoints that follow the autopilot + the recorder's programmatic
+// scroll. The recorder keeps the page at the top for ~26s, then scrolls to
+// "Shared decision draft" (~26s), "Alignment plan" (~54s), and nudges down
+// toward the handoff button (~78s). Because the page is already scrolling to
+// the right region, the camera mostly does gentle zoom/tilt for emphasis —
+// not aggressive panning. focusX/Y are normalized (0..1) on the captured
+// frame (0.5, 0.5 = dead center). The room is a three-column grid: left rail
+// ≈ 0.0–0.18, center column ≈ 0.18–0.82 (alignment board top → ADR middle →
+// plan bottom), right rail ≈ 0.82–1.0 (private helper lane with pending
+// deltas + promote buttons).
 type CameraKey = { at: number; zoom: number; focusX: number; focusY: number };
 
 const CAMERA_KEYS: CameraKey[] = [
-  { at: 0, zoom: 1.02, focusX: 0.5, focusY: 0.5 },
-  { at: 60, zoom: 1.45, focusX: 0.32, focusY: 0.4 },
-  { at: 300, zoom: 1.55, focusX: 0.5, focusY: 0.5 },
-  { at: 540, zoom: 1.55, focusX: 0.5, focusY: 0.55 },
-  { at: 780, zoom: 1.4, focusX: 0.5, focusY: 0.42 },
-  { at: 1020, zoom: 1.55, focusX: 0.82, focusY: 0.42 },
-  { at: 1440, zoom: 1.5, focusX: 0.8, focusY: 0.58 },
-  { at: 1800, zoom: 1.4, focusX: 0.72, focusY: 0.68 },
+  // Establishing: the whole room.
+  { at: 0, zoom: 1.03, focusX: 0.5, focusY: 0.5 },
+  // STEP 1 HUMANS — alignment board (center, upper half) populates as the
+  // three departments speak. Slight tilt left since the decision brief on
+  // the left rail frames the topic.
+  { at: 60, zoom: 1.28, focusX: 0.42, focusY: 0.45 },
+  // STEP 2 PRIVATE AGENT — pending deltas land in the right-rail "Private
+  // helper lane". Pan right.
+  { at: 270, zoom: 1.4, focusX: 0.82, focusY: 0.48 },
+  // STEP 3 PROMOTE — still in the right rail, slight tilt down so the
+  // Promote/Discard buttons on the delta cards are centered.
+  { at: 510, zoom: 1.4, focusX: 0.82, focusY: 0.58 },
+  // STEP 4 SYNTHESIS — orchestrator card in the center column, top area.
+  { at: 750, zoom: 1.3, focusX: 0.5, focusY: 0.4 },
+  // STEP 5 DECISION — the page scrolls at ~26s so "Shared decision draft"
+  // moves into view. Zoom slightly into the center column.
+  { at: 960, zoom: 1.32, focusX: 0.5, focusY: 0.5 },
+  // Hold on the sections being written (~30–50s of scene time).
+  { at: 1440, zoom: 1.38, focusX: 0.5, focusY: 0.55 },
+  // STEP 6 PLAN — page scrolls to "Alignment plan" at ~54s. Center column,
+  // slight downward tilt.
+  { at: 1620, zoom: 1.32, focusX: 0.5, focusY: 0.55 },
+  // STEP 7 HANDOFF — page nudges further so "Create handoff" + the JSON
+  // result are visible.
+  { at: 1920, zoom: 1.3, focusX: 0.5, focusY: 0.6 },
+  // Pull back slightly for the outro.
   { at: 2100, zoom: 1.08, focusX: 0.5, focusY: 0.5 },
 ];
 

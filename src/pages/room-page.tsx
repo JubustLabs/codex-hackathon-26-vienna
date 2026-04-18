@@ -1120,12 +1120,20 @@ export function RoomPage() {
             </button>
           </form>
           <div className="mini-stack" style={{ marginTop: "0.75rem" }}>
-            {snapshot.routedToParticipant.map((item) => (
-              <div className="list-card routed-card" key={item.id}>
-                <strong>Private nudge</strong>
-                <span>{item.message}</span>
-              </div>
-            ))}
+            {snapshot.routedToParticipant.map((item) => {
+              const isConflict = item.kind === "conflict";
+              return (
+                <div
+                  className={
+                    isConflict ? "list-card routed-card conflict-ping" : "list-card routed-card"
+                  }
+                  key={item.id}
+                >
+                  <strong>{isConflict ? "⚠ Conflict — please resolve" : "Private nudge"}</strong>
+                  <span>{item.message}</span>
+                </div>
+              );
+            })}
             {snapshot.pendingDeltas
               .filter((item) => item.status === "pending")
               .map((item) => (
