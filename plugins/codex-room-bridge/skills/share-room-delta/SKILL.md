@@ -7,7 +7,7 @@ description: Submit a concise private delta from a local Codex session into the 
 
 Use this when you want to push one distilled insight from the local agent context into the live room without exposing the full session.
 
-Prefer the plugin MCP tool `georg_submit_agent_delta` when the plugin is installed and active. Fall back to the shell bridge commands only when the MCP tools are unavailable.
+Prefer the plugin MCP tool `room_submit_agent_delta` when the plugin is installed and active. Fall back to the shell bridge commands only when the MCP tools are unavailable.
 
 ## Inputs
 
@@ -20,7 +20,7 @@ Prefer the plugin MCP tool `georg_submit_agent_delta` when the plugin is install
 
 Primary path:
 
-- `georg_submit_agent_delta`
+- `room_submit_agent_delta`
 
 Shell fallback:
 

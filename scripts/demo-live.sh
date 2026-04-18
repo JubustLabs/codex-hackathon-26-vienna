@@ -82,13 +82,13 @@ const room = await json(await fetch(`${base}/api/rooms`, {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
-    topic: "Realtime alignment workspace",
-    decision: "How do humans and local coding agents converge on one ADR?",
-    goal: "Show a denoised, human-controlled multi-agent decision room live.",
-    nonGoals: "Full autonomy, chat spam, and leaking private agent context into shared state.",
-    scope: "One live room, private agent deltas, shared alignment, ADR, plan, and handoff.",
-    successBar: "Two people and two local agents reach a visible shared decision path in one session.",
-    topicTags: ["hackathon", "agents", "adr", "alignment", "demo"],
+    topic: "Chocolate cookie flavor",
+    decision: "Which chocolate cookie flavor should we choose for the bake sale?",
+    goal: "Pick one cookie flavor that feels easy, tasty, and obvious to explain.",
+    nonGoals: "Fancy baking techniques, nutrition debates, or offering many flavors at once.",
+    scope: "One simple choice between classic chocolate chip, double chocolate, and chocolate-orange.",
+    successBar: "Anyone can see the options, the tradeoffs, and the final choice in under a minute.",
+    topicTags: ["cookies", "chocolate", "kids", "demo"],
   }),
 }));
 const alice = await json(await fetch(`${base}/api/rooms/${room.id}/join`, {
@@ -128,7 +128,7 @@ if [ "$DEMO_MODE" = "auto" ]; then
   fi
   INFO_SCRIPT="$(cat <<EOF
 clear
-printf 'Realtime Decision Alignment — interactive autopilot\n\n'
+printf 'Chocolate cookie demo — interactive autopilot\n\n'
 printf 'Room id: %s\n' '$ROOM_ID'
 printf 'Open this URL as the control seat (Alice, owner):\n'
 printf '  %s\n\n' '$ALICE_URL'
@@ -140,7 +140,7 @@ printf '  bottom-left: Alice bridge (watches private deltas)\n'
 printf '  right: Bob bridge (watches private deltas)\n'
 printf '  bottom-right: autopilot (this pane)\n\n'
 printf 'Autopilot: drives utterances → private deltas → promotes →\n'
-printf '           synthesize → ADR → plan → handoff. Starts in 4s…\n\n'
+printf '           synthesize → shared decision → alignment plan → handoff. Starts in 4s…\n\n'
 sleep 4
 $AUTOPILOT_CMD
 printf '\nautopilot done. Press Enter for a shell.\n'
@@ -151,7 +151,7 @@ EOF
 else
   INFO_SCRIPT="$(cat <<EOF
 clear
-printf 'Realtime Decision Alignment demo is ready.\n\n'
+printf 'Chocolate cookie demo is ready.\n\n'
 printf 'Room id: %s\n' '$ROOM_ID'
 printf 'Alice participant id: %s\n' '$ALICE_ID'
 printf 'Bob participant id: %s\n\n' '$BOB_ID'
@@ -166,8 +166,8 @@ printf '  right: Bob local agent bridge\n'
 printf '  bottom-right: this helper pane\n\n'
 printf 'Try typing lines into the Alice and Bob panes, then promote them in the browser.\n'
 printf 'Suggested lines:\n'
-printf '  Alice: Keep private agent output pending until a human promotes it.\n'
-printf '  Bob: The shared room should converge on one ADR, not a noisy transcript.\n\n'
+printf '  Alice: Classic chocolate chip feels easiest for the most kids.\n'
+printf '  Bob: Double chocolate tastes richer, but it might feel too heavy.\n\n'
 printf 'Attach to the tmux session with:\n'
 printf '  tmux attach -t %s\n' '$SESSION_NAME'
 exec bash

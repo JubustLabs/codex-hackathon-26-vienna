@@ -10,7 +10,7 @@
     "id": "guardrail-section-locks",
     "key": "single_writer_sections",
     "title": "Use section-level single-writer claims",
-    "description": "ADR and plan prose must use explicit single-writer ownership instead of silent concurrent merges.",
+    "description": "Shared decision and plan text should use explicit single-writer ownership instead of silent concurrent merges.",
     "severity": "hard"
   },
   {

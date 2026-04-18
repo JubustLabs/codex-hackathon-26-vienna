@@ -12,8 +12,11 @@ const participantRoles = ["decision_owner", "contributor", "observer"] as const;
 const resolutionTypes = ["agreement", "non_blocking", "dissent"] as const;
 const claimScopeTypes = ["adr_section", "plan_item"] as const;
 
-const baseUrl = process.env.GEORG_BASE_URL?.trim() || process.env.ROOM_SERVER_URL?.trim() || "http://localhost:3001";
-const appUrl = process.env.GEORG_APP_URL?.trim() || "http://localhost:5173";
+const baseUrl =
+  process.env.ROOM_BASE_URL?.trim() ||
+  process.env.ROOM_SERVER_URL?.trim() ||
+  "http://localhost:3001";
+const appUrl = process.env.ROOM_APP_URL?.trim() || "http://localhost:5173";
 
 const server = new McpServer({
   name: "codex-room-bridge",
@@ -85,14 +88,14 @@ async function latestPendingDelta(roomId: string, actorId: string) {
 }
 
 server.registerTool(
-  "georg_health",
+  "room_health",
   {
-    title: "Check georg health",
-    description: "Verify that the local georg API is reachable and return basic workspace counts.",
+    title: "Check room API health",
+    description: "Verify that the local room API is reachable and return basic workspace counts.",
   },
   async () => {
     const bootstrap = await requestJson<any>("/api/bootstrap");
-    return toolText("Local georg API is reachable.", {
+    return toolText("Local room API is reachable.", {
       baseUrl,
       appUrl,
       rooms: bootstrap.rooms.length,
@@ -104,14 +107,14 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_list_rooms",
+  "room_list_rooms",
   {
     title: "List rooms",
-    description: "List all existing rooms from the local georg API.",
+    description: "List all existing rooms from the local room API.",
   },
   async () => {
     const rooms = await requestJson<any[]>("/api/rooms");
-    return toolText("Current georg rooms.", {
+    return toolText("Current rooms.", {
       baseUrl,
       rooms,
     });
@@ -119,7 +122,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_get_room_snapshot",
+  "room_get_room_snapshot",
   {
     title: "Get room snapshot",
     description: "Fetch the full room snapshot, optionally scoped to a viewer/participant.",
@@ -135,10 +138,10 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_create_room",
+  "room_create_room",
   {
     title: "Create room",
-    description: "Create a new room in georg without joining a participant.",
+    description: "Create a new room without joining a participant.",
     inputSchema: {
       topic: z.string(),
       decision: z.string(),
@@ -162,7 +165,7 @@ server.registerTool(
         topicTags: topicTags ?? [],
       }),
     });
-    return toolText("Created georg room.", {
+    return toolText("Created room.", {
       room,
       roomUrl: absoluteRoomUrl(room.id),
     });
@@ -170,7 +173,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_create_room_with_owner",
+  "room_create_room_with_owner",
   {
     title: "Create room with owner",
     description: "Create a new room and immediately join it as a decision owner.",
@@ -216,7 +219,7 @@ server.registerTool(
       }),
     });
 
-    return toolText("Created georg room and joined as owner.", {
+    return toolText("Created room and joined as owner.", {
       room,
       participant,
       controlUrl: absoluteRoomUrl(room.id, participant.id),
@@ -225,7 +228,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_join_room",
+  "room_join_room",
   {
     title: "Join room",
     description: "Join an existing room as a decision owner, contributor, or observer.",
@@ -251,7 +254,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_set_room_mode",
+  "room_set_room_mode",
   {
     title: "Set room mode",
     description: "Move a room between explore, narrow, decide, and draft_adr.",
@@ -271,7 +274,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_add_utterance",
+  "room_add_utterance",
   {
     title: "Add utterance",
     description: "Post a shared human message into the room timeline.",
@@ -291,7 +294,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_submit_agent_delta",
+  "room_submit_agent_delta",
   {
     title: "Submit private delta",
     description: "Submit a private agent delta for a participant without immediately promoting it into shared state.",
@@ -320,7 +323,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_promote_agent_delta",
+  "room_promote_agent_delta",
   {
     title: "Promote private delta",
     description: "Promote a private delta into the shared room. If deltaId is omitted, the latest pending delta for that actor is used.",
@@ -344,7 +347,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_synthesize_now",
+  "room_synthesize_now",
   {
     title: "Synthesize now",
     description: "Trigger the orchestrator synthesis for the room immediately.",
@@ -363,7 +366,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_resolve_alignment_node",
+  "room_resolve_alignment_node",
   {
     title: "Resolve alignment node",
     description: "Resolve a blocker as agreement, dissent, or non-blocking.",
@@ -385,7 +388,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_claim_scope",
+  "room_claim_scope",
   {
     title: "Claim scope",
     description: "Claim an ADR section or plan item for editing.",
@@ -406,7 +409,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_release_scope",
+  "room_release_scope",
   {
     title: "Release scope",
     description: "Release an ADR section or plan item claim.",
@@ -427,7 +430,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_update_adr_section",
+  "room_update_adr_section",
   {
     title: "Update ADR section",
     description: "Write text into an ADR section. The actor must hold the section claim.",
@@ -448,7 +451,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_review_adr_section",
+  "room_review_adr_section",
   {
     title: "Review ADR section",
     description: "Mark an ADR section as reviewed by the actor.",
@@ -468,10 +471,10 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_regenerate_adr_section",
+  "room_regenerate_adr_section",
   {
     title: "Regenerate ADR section",
-    description: "Ask georg to regenerate an ADR section from the current room state.",
+    description: "Ask the room service to regenerate an ADR section from the current room state.",
     inputSchema: {
       roomId: z.string(),
       actorId: z.string(),
@@ -488,7 +491,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_approve_adr",
+  "room_approve_adr",
   {
     title: "Approve ADR",
     description: "Approve the ADR as a decision owner.",
@@ -507,7 +510,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_generate_plan",
+  "room_generate_plan",
   {
     title: "Generate plan",
     description: "Generate the implementation plan from an approved ADR.",
@@ -526,7 +529,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_accept_plan_owner",
+  "room_accept_plan_owner",
   {
     title: "Accept plan owner",
     description: "Accept ownership for one workstream in the generated plan.",
@@ -546,7 +549,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_accept_all_plan_owners",
+  "room_accept_all_plan_owners",
   {
     title: "Accept all plan owners",
     description: "Accept ownership for every generated workstream as the current actor.",
@@ -574,7 +577,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_approve_plan",
+  "room_approve_plan",
   {
     title: "Approve plan",
     description: "Approve the generated plan as a decision owner.",
@@ -593,7 +596,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_generate_handoff",
+  "room_generate_handoff",
   {
     title: "Generate handoff",
     description: "Generate the handoff package after ADR and plan approval.",
@@ -612,7 +615,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_get_adr",
+  "room_get_adr",
   {
     title: "Get ADR detail",
     description: "Fetch the ADR detail for a room.",
@@ -627,7 +630,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_get_plan",
+  "room_get_plan",
   {
     title: "Get plan detail",
     description: "Fetch the generated plan detail for a room.",
@@ -642,7 +645,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_get_handoff",
+  "room_get_handoff",
   {
     title: "Get handoff detail",
     description: "Fetch the generated handoff package for a room.",
@@ -657,7 +660,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "georg_list_alignment_nodes",
+  "room_list_alignment_nodes",
   {
     title: "List alignment nodes",
     description: "List alignment nodes in a room, optionally filtered by type.",

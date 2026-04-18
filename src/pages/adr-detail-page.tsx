@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { api } from "@/lib/api";
+import {
+  firstFilledLine,
+  labelDecisionSection,
+  splitDecisionText,
+} from "@/lib/decision-language";
 import { participantKey, withParticipant } from "@/lib/room-navigation";
 
 export function AdrDetailPage() {
@@ -18,16 +23,33 @@ export function AdrDetailPage() {
   }, [roomId]);
 
   if (!adr) {
-    return <section className="single-column-page">Loading ADR…</section>;
+    return <section className="single-column-page">Loading shared decision…</section>;
   }
+
+  const highlights = [
+    {
+      label: "Chosen path",
+      value: firstFilledLine(adr.sections.decision) || "No final choice yet",
+    },
+    {
+      label: "Tradeoff",
+      value: firstFilledLine(adr.sections.tradeoffs) || "No tradeoff captured yet",
+    },
+    {
+      label: "What happens next",
+      value:
+        firstFilledLine(adr.sections.consequences, adr.sections.implementation_guidance) ||
+        "No next step captured yet",
+    },
+  ];
 
   return (
     <section className="single-column-page">
       <div className="panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">ADR detail</p>
-            <h1>Architecture decision record</h1>
+            <p className="eyebrow">Shared decision record</p>
+            <h1>Review the choice after the fact</h1>
           </div>
           <div className="row-actions">
             <span className="status-chip" data-status={adr.status}>
@@ -41,10 +63,18 @@ export function AdrDetailPage() {
             </Link>
           </div>
         </div>
+        <div className="summary-strip">
+          {highlights.map((item) => (
+            <article className="summary-card" key={item.label}>
+              <small>{item.label}</small>
+              <strong>{item.value}</strong>
+            </article>
+          ))}
+        </div>
         {Object.entries(adr.sections).map(([key, value]) => (
           <article className="list-card" key={key}>
-            <strong>{key.replaceAll("_", " ")}</strong>
-            <span>{String(value) || "Empty"}</span>
+            <strong>{labelDecisionSection(key)}</strong>
+            <span>{splitDecisionText(String(value)).join(" · ") || "Empty"}</span>
           </article>
         ))}
       </div>

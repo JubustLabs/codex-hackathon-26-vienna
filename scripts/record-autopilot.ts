@@ -87,13 +87,13 @@ async function createRoomAndParticipants() {
   const room = await apiJson<{ id: string }>(`${args.server}/api/rooms`, {
     method: "POST",
     body: JSON.stringify({
-      topic: "Realtime alignment workspace",
-      decision: "How do humans and local coding agents converge on one ADR?",
-      goal: "Show a denoised, human-controlled multi-agent decision room live.",
-      nonGoals: "Full autonomy, chat spam, and leaking private agent context into shared state.",
-      scope: "One live room, private agent deltas, shared alignment, ADR, plan, and handoff.",
-      successBar: "Two people and two local agents reach a visible shared decision path in one session.",
-      topicTags: ["hackathon", "agents", "adr", "alignment", "demo"],
+      topic: "Chocolate cookie flavor",
+      decision: "Which chocolate cookie flavor should we choose for the bake sale?",
+      goal: "Pick one cookie flavor that feels easy, tasty, and obvious to explain.",
+      nonGoals: "Fancy baking techniques, nutrition debates, or offering many flavors at once.",
+      scope: "One simple choice between classic chocolate chip, double chocolate, and chocolate-orange.",
+      successBar: "Anyone can see the options, the tradeoffs, and the final choice in under a minute.",
+      topicTags: ["cookies", "chocolate", "kids", "demo"],
     }),
   });
   const alice = await apiJson<{ id: string }>(`${args.server}/api/rooms/${room.id}/join`, {

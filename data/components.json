@@ -3,7 +3,7 @@
     "id": "comp-react-client",
     "title": "React Client Shell",
     "kind": "frontend",
-    "summary": "The browser client surface for room collaboration, ADR editing, and plan review.",
+    "summary": "The browser client surface for room collaboration, shared decision editing, and plan review.",
     "evidence": ["src"],
     "status": "confirmed"
   },

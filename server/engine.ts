@@ -60,6 +60,11 @@ function summarizeNodes(snapshot: RoomSnapshot, type: AlignmentNode["type"]) {
     .slice(0, 3);
 }
 
+function isCookieDemo(snapshot: RoomSnapshot) {
+  const topic = snapshot.room.topic.toLowerCase();
+  return topic.includes("cookie") || snapshot.room.topicTags.includes("cookies");
+}
+
 function defaultSectionDraft(snapshot: RoomSnapshot, section: AdrSectionKey) {
   const goals = summarizeNodes(snapshot, "goal");
   const constraints = summarizeNodes(snapshot, "constraint");
@@ -74,8 +79,8 @@ function defaultSectionDraft(snapshot: RoomSnapshot, section: AdrSectionKey) {
     .map((participant) => participant.displayName);
 
   const map: Record<AdrSectionKey, string> = {
-    title: `${snapshot.room.topic} ADR`,
-    status: snapshot.adr.status === "approved" ? "Approved" : "Draft",
+    title: `${snapshot.room.topic} shared decision`,
+    status: snapshot.adr.status === "approved" ? "Approved" : "Ready for review",
     context: [snapshot.room.decision, snapshot.room.scope, ...constraints].filter(Boolean).join("\n"),
     goals: goals.join("\n"),
     constraints: constraints.join("\n"),
@@ -102,6 +107,83 @@ function buildPlan(snapshot: RoomSnapshot): GeneratedPlan {
   const decisionOwners = snapshot.participants.filter((participant) => snapshot.room.decisionOwnerIds.includes(participant.id));
   const reusable = components.map((component) => component.title);
   const firstOwnerId = decisionOwners[0]?.id ?? snapshot.participants[0]?.id ?? null;
+
+  if (isCookieDemo(snapshot)) {
+    const workstreams: Workstream[] = [
+      {
+        id: crypto.randomUUID(),
+        planId,
+        title: "Bake a tiny test batch",
+        description: "Bake a small plate of classic chocolate chip cookies so everyone can confirm the choice still feels right.",
+        suggestedOwnerId: firstOwnerId,
+        ownerStatus: "proposed",
+        size: "S",
+        dependsOn: [],
+        deliverables: ["Small test batch", "Quick taste check", "One yes/no decision after tasting"],
+        acceptanceChecks: ["Alice and Bob still want classic chocolate chip", "The cookies taste familiar and chocolatey"],
+        componentRefs: [],
+        guardrailExceptions: [],
+        firstStep: "Mix enough dough for one tray and bake six cookies.",
+        rolloutNotes: "If the taste is off, adjust the chocolate amount before the big batch.",
+        openQuestions: [],
+        patternRefs: snapshot.patterns.slice(0, 1).map((pattern) => pattern.id),
+      },
+      {
+        id: crypto.randomUUID(),
+        planId,
+        title: "Prepare the bake sale batch",
+        description: "Buy the ingredients and bake one full batch of the chosen cookie flavor.",
+        suggestedOwnerId: decisionOwners[1]?.id ?? firstOwnerId,
+        ownerStatus: "proposed",
+        size: "M",
+        dependsOn: [],
+        deliverables: ["Ingredient list", "Full cookie batch", "Cooling rack ready"],
+        acceptanceChecks: ["There are enough cookies for the table", "The batch matches the tested flavor"],
+        componentRefs: [],
+        guardrailExceptions: [],
+        firstStep: "Write the ingredient list for classic chocolate chip and check the pantry.",
+        rolloutNotes: "Keep the recipe simple so the flavor stays familiar.",
+        openQuestions: [],
+        patternRefs: snapshot.patterns.slice(0, 1).map((pattern) => pattern.id),
+      },
+      {
+        id: crypto.randomUUID(),
+        planId,
+        title: "Label and share the choice",
+        description: "Make the final choice easy to understand with a simple sign and one short explanation.",
+        suggestedOwnerId: decisionOwners[2]?.id ?? firstOwnerId,
+        ownerStatus: "proposed",
+        size: "S",
+        dependsOn: [],
+        deliverables: ["Cookie label sign", "One-sentence flavor reason", "Bake sale table setup"],
+        acceptanceChecks: ["A child can read the sign and know what the flavor is", "The table shows one clear choice"],
+        componentRefs: [],
+        guardrailExceptions: [],
+        firstStep: "Write a sign that says 'Classic Chocolate Chip' and one sentence about why it won.",
+        rolloutNotes: "Keep the wording short and cheerful.",
+        openQuestions: [],
+        patternRefs: snapshot.patterns.slice(0, 1).map((pattern) => pattern.id),
+      },
+    ];
+
+    return {
+      planId,
+      sections: {
+        summary: "This alignment plan turns the cookie choice into a small set of easy next steps.",
+        workstreams: workstreams.map((item) => `${item.title} (${item.size})`).join("\n"),
+        sequence_and_dependencies: "Taste a tiny batch first, then bake the big batch, then label the final choice for the table.",
+        deliverables_and_acceptance_checks: workstreams
+          .map((item) => `${item.title}: ${item.deliverables.join(", ")} | checks: ${item.acceptanceChecks.join(", ")}`)
+          .join("\n"),
+        open_implementation_questions: "No open questions yet.",
+        existing_components_to_reuse: "Use the same simple cookie recipe for both the test batch and the final batch.",
+        pattern_references: "Keep one clear choice visible so nobody wonders which cookie won.",
+        guardrail_exceptions: "No guardrail exceptions proposed.",
+        risks_and_rollout_notes: "Watch for the test batch feeling too plain or too sweet before baking the full tray.",
+      },
+      workstreams,
+    };
+  }
 
   const workstreams: Workstream[] = [
     {
@@ -155,18 +237,18 @@ function buildPlan(snapshot: RoomSnapshot): GeneratedPlan {
     {
       id: crypto.randomUUID(),
       planId,
-      title: "ADR and plan approval workflow",
-      description: "Close the loop from decide mode into reviewed ADR sections, immutable revisions, generated workstreams, and approved plan state.",
+      title: "Shared decision and plan approval flow",
+      description: "Close the loop from decide mode into reviewed decision sections, immutable revisions, generated workstreams, and approved plan state.",
       suggestedOwnerId: decisionOwners[2]?.id ?? firstOwnerId,
       ownerStatus: "proposed",
       size: "M",
       dependsOn: [],
       deliverables: ["Section review gates", "Plan owner acceptance", "Handoff package export"],
-      acceptanceChecks: ["ADR approval blocked until 12 sections are populated and reviewed", "Plan approval blocked until every workstream has an accepted owner"],
+      acceptanceChecks: ["Decision approval blocked until 12 sections are populated and reviewed", "Plan approval blocked until every workstream has an accepted owner"],
       componentRefs: reusable.slice(0, 2),
       guardrailExceptions: [],
       firstStep: "Walk the approval gates against one dissent scenario and one happy path.",
-      rolloutNotes: "Check for drift between approved ADR and generated plan revisions.",
+      rolloutNotes: "Check for drift between the approved decision and generated plan revisions.",
       openQuestions: [],
       patternRefs: snapshot.patterns.slice(0, 3).map((pattern) => pattern.id),
     },
@@ -175,9 +257,9 @@ function buildPlan(snapshot: RoomSnapshot): GeneratedPlan {
   return {
     planId,
     sections: {
-      summary: `This plan turns the approved ADR for ${snapshot.room.topic} into executable workstreams while preserving room guardrails, reuse decisions, and clear owners.`,
+      summary: `This alignment plan turns the approved shared decision for ${snapshot.room.topic} into executable workstreams while preserving room guardrails, reuse decisions, and clear owners.`,
       workstreams: workstreams.map((item) => `${item.title} (${item.size})`).join("\n"),
-      sequence_and_dependencies: "Start with realtime room hardening, then stabilize the orchestrator loop, then freeze ADR/plan approval and handoff export.",
+      sequence_and_dependencies: "Start with realtime room hardening, then stabilize the orchestrator loop, then freeze decision review, plan approval, and handoff export.",
       deliverables_and_acceptance_checks: workstreams
         .map((item) => `${item.title}: ${item.deliverables.join(", ")} | checks: ${item.acceptanceChecks.join(", ")}`)
         .join("\n"),
@@ -187,7 +269,7 @@ function buildPlan(snapshot: RoomSnapshot): GeneratedPlan {
       existing_components_to_reuse: reusable.join("\n"),
       pattern_references: snapshot.patterns.map((pattern) => `${pattern.title}: ${pattern.summary}`).join("\n"),
       guardrail_exceptions: "No guardrail exceptions proposed in the initial draft.",
-      risks_and_rollout_notes: "Watch for false agreement, stale section claims, and plan drift after ADR approval.",
+      risks_and_rollout_notes: "Watch for false agreement, stale section claims, and plan drift after decision approval.",
     },
     workstreams,
   };
@@ -275,7 +357,7 @@ export class HeuristicAiAdapter implements AiAdapter {
             ? "switch to decide mode"
             : snapshot.room.mode === "decide"
               ? "draft decision wording"
-              : "review ADR sections",
+              : "review shared decision sections",
       targetedFeedback,
       routedInsights,
       alignmentNodeDeltas: [],

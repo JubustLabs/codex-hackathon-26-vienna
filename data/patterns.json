@@ -1,9 +1,9 @@
 [
   {
     "id": "pattern-collab-adr",
-    "title": "Collaborative ADR Workspace",
-    "tags": ["adr", "architecture", "collaboration"],
-    "summary": "Use a structured ADR artifact with explicit approvers when the room needs durable agreement before execution."
+    "title": "Collaborative Decision Record",
+    "tags": ["decision", "collaboration", "review"],
+    "summary": "Use a structured shared decision record with explicit approvers when the room needs a durable choice before action."
   },
   {
     "id": "pattern-right-rail-private",

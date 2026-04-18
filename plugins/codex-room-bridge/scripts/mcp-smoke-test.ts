@@ -8,8 +8,8 @@ const transport = new StdioClientTransport({
   stderr: "pipe",
   env: {
     ...process.env,
-    GEORG_BASE_URL: process.env.GEORG_BASE_URL ?? "http://localhost:3001",
-    GEORG_APP_URL: process.env.GEORG_APP_URL ?? "http://localhost:5173",
+    ROOM_BASE_URL: process.env.ROOM_BASE_URL ?? "http://localhost:3001",
+    ROOM_APP_URL: process.env.ROOM_APP_URL ?? "http://localhost:5173",
   } as Record<string, string>,
 });
 
@@ -29,17 +29,17 @@ async function main() {
 
   const tools = await client.listTools();
   const toolNames = tools.tools.map((tool) => tool.name).sort();
-  if (!toolNames.includes("georg_health")) {
-    throw new Error("georg_health tool was not exposed by the MCP server.");
+  if (!toolNames.includes("room_health")) {
+    throw new Error("room_health tool was not exposed by the MCP server.");
   }
 
   const health = await client.callTool({
-    name: "georg_health",
+    name: "room_health",
     arguments: {},
   });
 
   const rooms = await client.callTool({
-    name: "georg_list_rooms",
+    name: "room_list_rooms",
     arguments: {},
   });
 

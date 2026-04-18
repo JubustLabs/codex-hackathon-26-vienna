@@ -23,16 +23,16 @@ export function WorkspaceOverviewPage() {
   return (
     <section className="page-grid">
       <div className="hero-card">
-        <p className="eyebrow">POC · vertical slice</p>
-        <h1>Agreement before generation</h1>
+        <p className="eyebrow">Simple demo · clear choices</p>
+        <h1>Pick one path before the noise takes over</h1>
         <p>
-          Generating code has never been easier. Agreeing on <em>what</em> to build is still hard.
-          This is the room where your agents stop fighting your colleague's agents — and you, the human, stay in the loop to steer.
-          One shared decision, one ADR, one plan, one handoff.
+          This space keeps one decision visible from start to finish.
+          People can talk, private helpers can suggest, and the final choice stays easy to review later.
+          The default example is intentionally simple: choose one chocolate cookie flavor and turn it into one clear alignment plan.
         </p>
         <div className="hero-actions">
           <Link className="button primary" to="/rooms/new">
-            Create a room →
+            Start the cookie demo →
           </Link>
           {rooms[0] ? (
             <Link className="button" to={`/rooms/${rooms[0].id}`}>
@@ -65,7 +65,7 @@ export function WorkspaceOverviewPage() {
           <div className="panel-header">
             <h2>Live rooms</h2>
             <Link className="button ghost" to="/rooms/new">
-              New room
+              New space
             </Link>
           </div>
           {rooms.length ? (
@@ -77,7 +77,7 @@ export function WorkspaceOverviewPage() {
               </Link>
             ))
           ) : (
-            <p className="empty-state">No rooms yet. Start with one scoped decision.</p>
+            <p className="empty-state">No spaces yet. Start with one clear choice.</p>
           )}
         </section>
 
@@ -103,11 +103,11 @@ export function WorkspaceOverviewPage() {
           </div>
           <Link className="list-card" to="/patterns">
             <strong>{patterns.length} patterns</strong>
-            <span>Tag-matched, ready in every room from the first utterance.</span>
+            <span>Reusable decision shapes that help a room stay simple and understandable.</span>
           </Link>
           <Link className="list-card" to="/components">
             <strong>{components.length} reusable components</strong>
-            <span>Catalogued with evidence so proposals trace back to real code.</span>
+            <span>Catalogued with evidence so ideas can still trace back to something concrete.</span>
           </Link>
         </section>
       </div>

@@ -7,22 +7,26 @@ import {
   type AdrSectionKey,
   type OwnershipClaim,
   type Participant,
+  type RoomSnapshot,
   type Workstream,
 } from "@shared/contracts";
 
 import { useLiveRoom } from "@/hooks/use-live-room";
 import { api } from "@/lib/api";
+import {
+  firstFilledLine,
+  labelDecisionSection,
+  labelRoomMode,
+  splitDecisionText,
+} from "@/lib/decision-language";
 import { participantKey, withParticipant } from "@/lib/room-navigation";
 
 const AVATAR_COLORS = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 
-const ALIGNMENT_TYPES = [
-  "goal",
-  "constraint",
+const DECISION_MAP_TYPES = [
   "option",
   "tradeoff",
   "risk",
-  "open_question",
   "agreement",
   "unresolved_difference",
 ] as const;
@@ -78,16 +82,16 @@ const EVENT_FRIENDLY: Record<string, { label: string; kind: string }> = {
   "agent.delta.submitted": { label: "Private delta", kind: "agent" },
   "agent.delta.promoted": { label: "Delta promoted", kind: "agent" },
   "agent.delta.discarded": { label: "Delta discarded", kind: "agent" },
-  "adr.section.claimed": { label: "ADR section claimed", kind: "adr" },
-  "adr.section.released": { label: "ADR section released", kind: "adr" },
-  "adr.section.updated": { label: "ADR edit", kind: "adr" },
-  "adr.section.reviewed": { label: "ADR reviewed", kind: "adr" },
-  "adr.section.overlap_warning": { label: "ADR conflict", kind: "warn" },
-  "adr.approved": { label: "ADR approved", kind: "approval" },
+  "adr.section.claimed": { label: "Decision section claimed", kind: "adr" },
+  "adr.section.released": { label: "Decision section released", kind: "adr" },
+  "adr.section.updated": { label: "Decision draft updated", kind: "adr" },
+  "adr.section.reviewed": { label: "Decision section reviewed", kind: "adr" },
+  "adr.section.overlap_warning": { label: "Decision draft conflict", kind: "warn" },
+  "adr.approved": { label: "Decision approved", kind: "approval" },
   "adr.dissent_recorded": { label: "Dissent recorded", kind: "warn" },
-  "plan.generated": { label: "Plan generated", kind: "plan" },
-  "plan.updated": { label: "Plan updated", kind: "plan" },
-  "plan.approved": { label: "Plan approved", kind: "approval" },
+  "plan.generated": { label: "Alignment plan generated", kind: "plan" },
+  "plan.updated": { label: "Alignment plan updated", kind: "plan" },
+  "plan.approved": { label: "Alignment plan approved", kind: "approval" },
   "plan_item.claimed": { label: "Plan item claimed", kind: "plan" },
   "plan_item.released": { label: "Plan item released", kind: "plan" },
   "plan_item.owner_accepted": { label: "Plan owner accepted", kind: "plan" },
@@ -121,6 +125,13 @@ function relativeTime(iso: string, now: number) {
   return `${days}d ago`;
 }
 
+function summarizeNodes(snapshot: RoomSnapshot, type: RoomSnapshot["alignmentNodes"][number]["type"], limit = 3) {
+  return snapshot.alignmentNodes
+    .filter((node) => node.type === type)
+    .map((node) => node.text)
+    .slice(0, limit);
+}
+
 type NextMove = { headline: string; detail: string };
 
 function computeNextMove(
@@ -131,26 +142,25 @@ function computeNextMove(
   if (!readiness.unresolvedDifferencesCleared) {
     return {
       headline: "Resolve blockers",
-      detail: "Clear the unresolved differences before drafting the ADR.",
+      detail: "Clear the open disagreements before locking the shared decision.",
     };
   }
   if (!readiness.adrSectionsPopulated) {
     return {
-      headline: "Draft the ADR",
-      detail:
-        "Claim each section and fill it in — regenerate from evidence if helpful.",
+      headline: "Shape the shared decision",
+      detail: "Claim each section and fill it in so the choice is easy to review later.",
     };
   }
   if (!readiness.adrReviewed) {
     return {
       headline: "Review every section",
-      detail: "Each ADR section needs at least one reviewer before approval.",
+      detail: "Each section needs at least one reviewer before the final approval.",
     };
   }
   if (adr.status !== "approved") {
     const done = adr.approvals.length;
     return {
-      headline: "Approve the ADR",
+      headline: "Approve the decision",
       detail: owners
         ? `${done} of ${owners} decision owners approved.`
         : "Add decision owners to approve.",
@@ -158,8 +168,8 @@ function computeNextMove(
   }
   if (!plan.id || plan.workstreams.length === 0) {
     return {
-      headline: "Generate the plan",
-      detail: "The ADR is approved — spin up the implementation plan.",
+      headline: "Build the alignment plan",
+      detail: "The shared decision is approved. Turn it into simple next steps.",
     };
   }
   if (!readiness.acceptedWorkstreamOwners) {
@@ -172,7 +182,7 @@ function computeNextMove(
   if (plan.status !== "approved") {
     const done = plan.approvals.length;
     return {
-      headline: "Approve the plan",
+      headline: "Approve the alignment plan",
       detail: owners
         ? `${done} of ${owners} decision owners approved.`
         : "Add decision owners to approve.",
@@ -341,6 +351,28 @@ export function RoomPage() {
   const renderNow = Date.now();
   const participantById = (id: string) =>
     snapshot.participants.find((participant) => participant.id === id);
+  const decisionOptions = [
+    ...splitDecisionText(snapshot.adr.sections.options_considered),
+    ...summarizeNodes(snapshot, "option"),
+  ].filter((value, index, list) => value && list.indexOf(value) === index);
+  const decisionTradeoffs = [
+    ...splitDecisionText(snapshot.adr.sections.tradeoffs),
+    ...summarizeNodes(snapshot, "tradeoff"),
+  ].filter((value, index, list) => value && list.indexOf(value) === index);
+  const decisionRisks = [
+    ...splitDecisionText(snapshot.adr.sections.consequences),
+    ...summarizeNodes(snapshot, "risk"),
+    ...summarizeNodes(snapshot, "unresolved_difference"),
+  ].filter((value, index, list) => value && list.indexOf(value) === index);
+  const chosenPath =
+    firstFilledLine(
+      snapshot.adr.sections.decision,
+      summarizeNodes(snapshot, "agreement", 1)[0],
+      decisionOptions[0],
+    ) || "No clear front-runner yet";
+  const whyThisHelps =
+    firstFilledLine(snapshot.adr.sections.goals, snapshot.room.goal) ||
+    "Capture why this choice matters.";
 
   return (
     <section className="room-shell">
@@ -395,14 +427,12 @@ export function RoomPage() {
       <div className="room-column left-rail">
         <section className="panel">
           <div className="panel-header">
-            <h2>Brief</h2>
-            <span className="badge">
-              {snapshot.room.mode.replaceAll("_", " ")}
-            </span>
+            <h2>Decision brief</h2>
+            <span className="badge">{labelRoomMode(snapshot.room.mode)}</span>
           </div>
           <p>{snapshot.room.decision}</p>
-          <p>{snapshot.room.goal}</p>
-          <div className="presence-strip" style={{ marginTop: "0.4rem" }}>
+          <small>{snapshot.room.goal}</small>
+          <div className="presence-strip" style={{ marginTop: "0.6rem" }}>
             {snapshot.room.topicTags.map((tag) => (
               <span className="badge" key={tag}>
                 #{tag}
@@ -413,63 +443,72 @@ export function RoomPage() {
 
         <section className="panel">
           <div className="panel-header">
-            <h2>Guardrails</h2>
-            <small>{snapshot.guardrails.length}</small>
+            <h2>Decision tree</h2>
+            <Link
+              className="button ghost"
+              to={withParticipant(`/adrs/${roomId}`, roomLinkParticipantId)}
+            >
+              Review →
+            </Link>
           </div>
-          {snapshot.guardrails.map((guardrail) => (
-            <div className="list-card" key={guardrail.id}>
-              <strong>{guardrail.title}</strong>
-              <span>{guardrail.description}</span>
-              <small className="role-tag">{guardrail.severity}</small>
-            </div>
-          ))}
+          <div className="summary-stack">
+            <article className="summary-card">
+              <small>Front-runner</small>
+              <strong>{chosenPath}</strong>
+            </article>
+            <article className="summary-card">
+              <small>Why it helps</small>
+              <strong>{whyThisHelps}</strong>
+            </article>
+          </div>
+          <div className="mini-stack">
+            <article className="list-card">
+              <strong>Options on the table</strong>
+              <span>
+                {decisionOptions.length
+                  ? decisionOptions.join(" · ")
+                  : "No options captured yet."}
+              </span>
+            </article>
+            <article className="list-card">
+              <strong>Main tradeoff</strong>
+              <span>{decisionTradeoffs[0] ?? "No tradeoff captured yet."}</span>
+            </article>
+            <article className="list-card">
+              <strong>Watch out for</strong>
+              <span>{decisionRisks[0] ?? "No major risk captured yet."}</span>
+            </article>
+          </div>
         </section>
 
         <section className="panel">
           <div className="panel-header">
-            <h2>Components</h2>
-            <small>{snapshot.components.length}</small>
+            <h2>People here</h2>
+            <small>{snapshot.participants.length}</small>
           </div>
-          {snapshot.components.map((component) => (
-            <div className="list-card" key={component.id}>
-              <strong>{component.title}</strong>
-              <span>{component.summary}</span>
-              <small>{component.evidence.join(" · ")}</small>
-            </div>
-          ))}
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Patterns</h2>
-            <small>{snapshot.patterns.length}</small>
+          <div className="presence-strip">
+            {snapshot.participants.map((participant) => (
+              <span
+                className="presence-pill"
+                key={participant.id}
+                data-role={participant.role}
+              >
+                <span
+                  className="avatar"
+                  data-color={colorFor(participant.id)}
+                  aria-hidden="true"
+                >
+                  {initialsFrom(participant.displayName)}
+                </span>
+                <span>{participant.displayName}</span>
+                <span className="role-tag">{roleLabel(participant.role)}</span>
+              </span>
+            ))}
           </div>
-          {snapshot.patterns.map((pattern) => (
-            <div className="list-card" key={pattern.id}>
-              <strong>{pattern.title}</strong>
-              <span>{pattern.summary}</span>
-            </div>
-          ))}
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Ownership</h2>
-            <small>{snapshot.claims.length}</small>
-          </div>
-          {snapshot.claims.length ? (
-            snapshot.claims.map((claim) => (
-              <div className="list-card" key={claim.id}>
-                <strong>{claim.scopeType.replaceAll("_", " ")}</strong>
-                <span>{claim.scopeId}</span>
-                <small className="role-tag">
-                  claimed by {claimOwnerName(snapshot, claim)}
-                </small>
-              </div>
-            ))
-          ) : (
-            <p className="empty-state">No active section claims.</p>
-          )}
+          <small>
+            {snapshot.room.decisionOwnerIds.length} decision owner(s) can approve
+            the final choice.
+          </small>
         </section>
       </div>
 
@@ -477,7 +516,7 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Decision room</p>
+              <p className="eyebrow">Shared decision space</p>
               <h1>{snapshot.room.topic}</h1>
             </div>
             <div className="segmented" role="tablist" aria-label="Room mode">
@@ -494,7 +533,7 @@ export function RoomPage() {
                   }
                   type="button"
                 >
-                  {mode.replaceAll("_", " ")}
+                  {labelRoomMode(mode)}
                 </button>
               ))}
             </div>
@@ -507,14 +546,14 @@ export function RoomPage() {
                   : "badge"
               }
             >
-              ADR sections
+              Decision draft
             </div>
             <div
               className={
                 snapshot.readiness.adrReviewed ? "badge success" : "badge"
               }
             >
-              ADR reviewed
+              Reviewed
             </div>
             <div
               className={
@@ -532,7 +571,7 @@ export function RoomPage() {
                   : "badge"
               }
             >
-              Plan owners
+              Owners ready
             </div>
           </div>
           <div className="next-move">
@@ -564,6 +603,26 @@ export function RoomPage() {
               </span>
             ) : null}
           </div>
+          <div className="row-actions" style={{ marginTop: "0.75rem" }}>
+            <Link
+              className="button ghost"
+              to={withParticipant(`/adrs/${roomId}`, roomLinkParticipantId)}
+            >
+              Decision record →
+            </Link>
+            <Link
+              className="button ghost"
+              to={withParticipant(`/plans/${roomId}`, roomLinkParticipantId)}
+            >
+              Alignment plan →
+            </Link>
+            <Link
+              className="button ghost"
+              to={withParticipant(`/handoff/${roomId}`, roomLinkParticipantId)}
+            >
+              Handoff →
+            </Link>
+          </div>
           {actionError ? (
             <p className="empty-state error-state">{actionError}</p>
           ) : null}
@@ -571,53 +630,19 @@ export function RoomPage() {
 
         <section className="panel">
           <div className="panel-header">
-            <h2>Shared room</h2>
-            <div className="row-actions">
-              <button
-                className="button"
-                disabled={!canParticipate}
-                onClick={() =>
-                  canParticipate &&
-                  void runAction(() => api.synthesizeNow(roomId, me!.id))
-                }
-                type="button"
-              >
-                Synthesize now
-              </button>
-              <Link
-                className="button ghost"
-                to={withParticipant(`/adrs/${roomId}`, roomLinkParticipantId)}
-              >
-                ADR →
-              </Link>
-              <Link
-                className="button ghost"
-                to={withParticipant(`/plans/${roomId}`, roomLinkParticipantId)}
-              >
-                Plan →
-              </Link>
-            </div>
+            <h2>Talk it through</h2>
+            <button
+              className="button"
+              disabled={!canParticipate}
+              onClick={() =>
+                canParticipate &&
+                void runAction(() => api.synthesizeNow(roomId, me!.id))
+              }
+              type="button"
+            >
+              Synthesize now
+            </button>
           </div>
-          <div className="presence-strip">
-            {snapshot.participants.map((participant) => (
-              <span
-                className="presence-pill"
-                key={participant.id}
-                data-role={participant.role}
-              >
-                <span
-                  className="avatar"
-                  data-color={colorFor(participant.id)}
-                  aria-hidden="true"
-                >
-                  {initialsFrom(participant.displayName)}
-                </span>
-                <span>{participant.displayName}</span>
-                <span className="role-tag">{roleLabel(participant.role)}</span>
-              </span>
-            ))}
-          </div>
-
           <form
             className="composer"
             onSubmit={async (event) => {
@@ -625,9 +650,7 @@ export function RoomPage() {
               if (!canParticipate || !utterance.trim()) {
                 return;
               }
-              await runAction(() =>
-                api.addUtterance(roomId, me!.id, utterance),
-              );
+              await runAction(() => api.addUtterance(roomId, me!.id, utterance));
               setUtterance("");
             }}
           >
@@ -635,7 +658,7 @@ export function RoomPage() {
               disabled={!canParticipate}
               placeholder={
                 canParticipate
-                  ? "Add a thought everyone should see — a goal, constraint, option, risk. Steer the room."
+                  ? "Add one clear thought everyone should see: an option, a tradeoff, a worry, or a reason."
                   : "Observers are read-only in this slice."
               }
               rows={3}
@@ -643,69 +666,107 @@ export function RoomPage() {
               onChange={(event) => setUtterance(event.target.value)}
             />
             <div className="row-actions">
-              <small>
-                Posts to the shared timeline and is classified into alignment
-                nodes.
-              </small>
+              <small>The room turns clear messages into a simpler decision map.</small>
               <button
                 className="button primary"
                 disabled={!canParticipate || !utterance.trim()}
                 type="submit"
               >
-                Send to room
+                Share thought
               </button>
             </div>
           </form>
+          {snapshot.orchestratorUpdates[0] ? (
+            <article className="orchestrator-card">
+              <div className="card-meta">
+                <span>Latest synthesis</span>
+                <span className="timeline-time">
+                  {relativeTime(
+                    snapshot.orchestratorUpdates[0].createdAt,
+                    renderNow,
+                  )}
+                </span>
+              </div>
+              <p>{snapshot.orchestratorUpdates[0].synthesis}</p>
+              {snapshot.orchestratorUpdates[0].suggestedNextMove ? (
+                <small>
+                  Next move · {snapshot.orchestratorUpdates[0].suggestedNextMove}
+                </small>
+              ) : null}
+            </article>
+          ) : null}
+        </section>
 
-          <div className="timeline">
-            {snapshot.orchestratorUpdates.map((update) => (
-              <article className="orchestrator-card" key={update.id}>
-                <div className="card-meta">
-                  <span>Orchestrator synthesis</span>
-                  <span className="timeline-time">
-                    {relativeTime(update.createdAt, renderNow)}
-                  </span>
-                </div>
-                <p>{update.synthesis}</p>
-                {update.suggestedNextMove ? (
-                  <small>Next move · {update.suggestedNextMove}</small>
-                ) : null}
-              </article>
-            ))}
-            {snapshot.recentEvents.map((event) => {
-              const meta = describeEvent(event.type);
-              const actor =
-                event.actorId === "system"
-                  ? null
-                  : participantById(event.actorId);
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Decision map</h2>
+            <small>{snapshot.alignmentNodes.length} signals</small>
+          </div>
+          <div className="alignment-grid decision-map-grid">
+            {DECISION_MAP_TYPES.map((type) => {
+              const items = snapshot.alignmentNodes.filter(
+                (node) => node.type === type,
+              );
               return (
-                <article
-                  className="timeline-row"
-                  key={event.id}
-                  data-kind={meta.kind}
-                >
-                  <div className="timeline-head">
-                    <strong>{meta.label}</strong>
-                    <span className="timeline-time">
-                      {relativeTime(event.timestamp, renderNow)}
-                    </span>
-                  </div>
-                  <span>{event.summary}</span>
-                  {actor ? (
-                    <span className="timeline-actor">
-                      <span
-                        className="avatar"
-                        data-color={colorFor(actor.id)}
-                        aria-hidden="true"
-                      >
-                        {initialsFrom(actor.displayName)}
-                      </span>
-                      {actor.displayName}
-                    </span>
-                  ) : event.actorId === "system" ? (
-                    <span className="timeline-actor system">system</span>
-                  ) : null}
-                </article>
+                <div className="alignment-column" key={type} data-type={type}>
+                  <h3>{type.replaceAll("_", " ")}</h3>
+                  {items.length ? (
+                    items.map((node) => (
+                      <div className="node-card" key={node.id}>
+                        <strong>{Math.round(node.confidence * 100)}%</strong>
+                        <span>{node.text}</span>
+                        {node.type === "unresolved_difference" &&
+                        canParticipate ? (
+                          <div className="row-actions">
+                            <button
+                              className="button"
+                              onClick={() =>
+                                void resolveBlocker(
+                                  node.id,
+                                  "agreement",
+                                  node.text,
+                                )
+                              }
+                              type="button"
+                            >
+                              Resolve
+                            </button>
+                            <button
+                              className="button"
+                              onClick={() =>
+                                void resolveBlocker(
+                                  node.id,
+                                  "dissent",
+                                  node.text,
+                                )
+                              }
+                              type="button"
+                            >
+                              Dissent
+                            </button>
+                            <button
+                              className="button"
+                              onClick={() =>
+                                void resolveBlocker(
+                                  node.id,
+                                  "non_blocking",
+                                  node.text,
+                                )
+                              }
+                              type="button"
+                            >
+                              Non-blocking
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-state compact-empty">
+                      Nothing here yet.
+                    </p>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -713,69 +774,7 @@ export function RoomPage() {
 
         <section className="panel">
           <div className="panel-header">
-            <h2>Alignment board</h2>
-            <small>{snapshot.alignmentNodes.length} nodes</small>
-          </div>
-          <div className="alignment-grid">
-            {ALIGNMENT_TYPES.map((type) => (
-              <div className="alignment-column" key={type} data-type={type}>
-                <h3>{type.replaceAll("_", " ")}</h3>
-                {snapshot.alignmentNodes
-                  .filter((node) => node.type === type)
-                  .map((node) => (
-                    <div className="node-card" key={node.id}>
-                      <strong>{Math.round(node.confidence * 100)}%</strong>
-                      <span>{node.text}</span>
-                      {node.type === "unresolved_difference" &&
-                      canParticipate ? (
-                        <div className="row-actions">
-                          <button
-                            className="button"
-                            onClick={() =>
-                              void resolveBlocker(
-                                node.id,
-                                "agreement",
-                                node.text,
-                              )
-                            }
-                            type="button"
-                          >
-                            Resolve
-                          </button>
-                          <button
-                            className="button"
-                            onClick={() =>
-                              void resolveBlocker(node.id, "dissent", node.text)
-                            }
-                            type="button"
-                          >
-                            Dissent
-                          </button>
-                          <button
-                            className="button"
-                            onClick={() =>
-                              void resolveBlocker(
-                                node.id,
-                                "non_blocking",
-                                node.text,
-                              )
-                            }
-                            type="button"
-                          >
-                            Non-blocking
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <h2>ADR editor</h2>
+            <h2>Shared decision draft</h2>
             <div className="row-actions">
               <span className="status-chip" data-status={snapshot.adr.status}>
                 {snapshot.adr.status.replaceAll("_", " ")}
@@ -793,7 +792,7 @@ export function RoomPage() {
                 }
                 type="button"
               >
-                Approve ADR
+                Approve decision
               </button>
             </div>
           </div>
@@ -808,7 +807,7 @@ export function RoomPage() {
               >
                 <div className="editor-header">
                   <div>
-                    <strong>{section.replaceAll("_", " ")}</strong>
+                    <strong>{labelDecisionSection(section)}</strong>
                     <small>
                       {claim
                         ? `Claimed by ${claimOwnerName(snapshot, claim)}`
@@ -858,7 +857,7 @@ export function RoomPage() {
                       }
                       type="button"
                     >
-                      Regenerate
+                      Ask for draft
                     </button>
                     <button
                       className="button"
@@ -871,7 +870,7 @@ export function RoomPage() {
                       }
                       type="button"
                     >
-                      Review
+                      Mark reviewed
                     </button>
                   </div>
                 </div>
@@ -887,9 +886,7 @@ export function RoomPage() {
                   }
                 />
                 <div className="row-actions">
-                  <small>
-                    {snapshot.adr.reviews[section].length} reviewer(s)
-                  </small>
+                  <small>{snapshot.adr.reviews[section].length} reviewer(s)</small>
                   <button
                     className="button primary"
                     disabled={!mine}
@@ -916,7 +913,7 @@ export function RoomPage() {
 
         <section className="panel">
           <div className="panel-header">
-            <h2>Implementation plan</h2>
+            <h2>Alignment plan</h2>
             <div className="row-actions">
               {snapshot.plan.status ? (
                 <span
@@ -941,7 +938,7 @@ export function RoomPage() {
                 }
                 type="button"
               >
-                Generate plan
+                Build plan
               </button>
               <button
                 className="button"
@@ -967,14 +964,8 @@ export function RoomPage() {
                 }
                 type="button"
               >
-                Generate handoff
+                Create handoff
               </button>
-              <Link
-                className="button ghost"
-                to={withParticipant(`/handoff/${roomId}`, roomLinkParticipantId)}
-              >
-                Handoff →
-              </Link>
             </div>
           </div>
           {snapshot.plan.workstreams.length ? (
@@ -990,9 +981,7 @@ export function RoomPage() {
                   <div className="editor-header">
                     <div>
                       <strong>{item.title}</strong>
-                      <small>
-                        {item.size} · owner {item.ownerStatus}
-                      </small>
+                      <small>{item.size} · owner {item.ownerStatus}</small>
                     </div>
                     <div className="row-actions">
                       <button
@@ -1067,7 +1056,7 @@ export function RoomPage() {
                       }
                       type="button"
                     >
-                      Save workstream
+                      Save step
                     </button>
                   </div>
                 </article>
@@ -1075,7 +1064,7 @@ export function RoomPage() {
             })
           ) : (
             <p className="empty-state">
-              Generate a plan after the ADR is approved.
+              Approve the shared decision first, then build the alignment plan.
             </p>
           )}
         </section>
@@ -1084,30 +1073,13 @@ export function RoomPage() {
       <div className="room-column right-rail">
         <section className="panel">
           <div className="panel-header">
-            <h2>Bridge ids</h2>
+            <h2>Private helper lane</h2>
+            <span className="badge">
+              {pendingCount + snapshot.routedToParticipant.length}
+            </span>
           </div>
           <small>
-            Use these values with the local Codex bridge in
-            `plugins/codex-room-bridge`.
-          </small>
-          <div className="list-card" style={{ marginTop: "0.8rem" }}>
-            <strong>Room id</strong>
-            <code>{roomId}</code>
-          </div>
-          {me ? (
-            <div className="list-card">
-              <strong>Your participant id</strong>
-              <code>{me.id}</code>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Your work</h2>
-          </div>
-          <small>
-            Your private agent suggests — you decide what enters the shared room. Nothing leaks.
+            Private helpers can suggest ideas. You decide what becomes shared.
           </small>
           <form
             className="stack-form"
@@ -1132,8 +1104,8 @@ export function RoomPage() {
               disabled={!canParticipate}
               placeholder={
                 canParticipate
-                  ? "Drop what your private agent just suggested. Promote the good, discard the noise."
-                  : "Observers cannot attach private agents."
+                  ? "Add one private suggestion. Promote the good ones and drop the rest."
+                  : "Observers cannot attach private helpers."
               }
               rows={3}
               value={agentDeltaText}
@@ -1144,81 +1116,118 @@ export function RoomPage() {
               disabled={!canParticipate || !agentDeltaText.trim()}
               type="submit"
             >
-              Add pending delta
+              Add private suggestion
             </button>
           </form>
+          <div className="mini-stack" style={{ marginTop: "0.75rem" }}>
+            {snapshot.routedToParticipant.map((item) => (
+              <div className="list-card routed-card" key={item.id}>
+                <strong>Private nudge</strong>
+                <span>{item.message}</span>
+              </div>
+            ))}
+            {snapshot.pendingDeltas
+              .filter((item) => item.status === "pending")
+              .map((item) => (
+                <div className="editor-card" key={item.id}>
+                  <strong>{item.sourceAgent}</strong>
+                  <span>{item.text}</span>
+                  <div className="row-actions">
+                    <button
+                      className="button primary"
+                      disabled={!canParticipate}
+                      onClick={() =>
+                        canParticipate &&
+                        void runAction(() =>
+                          api.promoteAgentDelta(roomId, me!.id, item.id),
+                        )
+                      }
+                      type="button"
+                    >
+                      Promote
+                    </button>
+                    <button
+                      className="button"
+                      disabled={!canParticipate}
+                      onClick={() =>
+                        canParticipate &&
+                        void runAction(() =>
+                          api.discardAgentDelta(roomId, me!.id, item.id),
+                        )
+                      }
+                      type="button"
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+          {!pendingCount && !snapshot.routedToParticipant.length ? (
+            <p className="empty-state" style={{ marginTop: "0.8rem" }}>
+              No private suggestions waiting.
+            </p>
+          ) : null}
+          <details className="bridge-details">
+            <summary>Codex bridge ids</summary>
+            <div className="mini-stack">
+              <div className="list-card">
+                <strong>Room id</strong>
+                <code>{roomId}</code>
+              </div>
+              {me ? (
+                <div className="list-card">
+                  <strong>Your participant id</strong>
+                  <code>{me.id}</code>
+                </div>
+              ) : null}
+            </div>
+          </details>
         </section>
 
         <section className="panel">
           <div className="panel-header">
-            <h2>Pending</h2>
-            <span className="badge">{pendingCount}</span>
+            <h2>Recent activity</h2>
+            <small>{Math.min(snapshot.recentEvents.length, 8)}</small>
           </div>
-          {snapshot.pendingDeltas
-            .filter((item) => item.status === "pending")
-            .map((item) => (
-              <div className="editor-card" key={item.id}>
-                <strong>{item.sourceAgent}</strong>
-                <span>{item.text}</span>
-                <div className="row-actions">
-                  <button
-                    className="button primary"
-                    disabled={!canParticipate}
-                    onClick={() =>
-                      canParticipate &&
-                      void runAction(() =>
-                        api.promoteAgentDelta(roomId, me!.id, item.id),
-                      )
-                    }
-                    type="button"
-                  >
-                    Promote
-                  </button>
-                  <button
-                    className="button"
-                    disabled={!canParticipate}
-                    onClick={() =>
-                      canParticipate &&
-                      void runAction(() =>
-                        api.discardAgentDelta(roomId, me!.id, item.id),
-                      )
-                    }
-                    type="button"
-                  >
-                    Discard
-                  </button>
-                </div>
-              </div>
-            ))}
-          {!pendingCount ? (
-            <p className="empty-state">No pending private deltas.</p>
-          ) : null}
-        </section>
-
-        <section
-          className={
-            snapshot.routedToParticipant.length ? "panel routed-panel" : "panel"
-          }
-        >
-          <div className="panel-header">
-            <h2>Routed to me</h2>
-            <span
-              className={
-                snapshot.routedToParticipant.length ? "badge warn" : "badge"
-              }
-            >
-              {snapshot.routedToParticipant.length}
-            </span>
+          <div className="timeline">
+            {snapshot.recentEvents.slice(0, 8).map((event) => {
+              const meta = describeEvent(event.type);
+              const actor =
+                event.actorId === "system"
+                  ? null
+                  : participantById(event.actorId);
+              return (
+                <article
+                  className="timeline-row"
+                  key={event.id}
+                  data-kind={meta.kind}
+                >
+                  <div className="timeline-head">
+                    <strong>{meta.label}</strong>
+                    <span className="timeline-time">
+                      {relativeTime(event.timestamp, renderNow)}
+                    </span>
+                  </div>
+                  <span>{event.summary}</span>
+                  {actor ? (
+                    <span className="timeline-actor">
+                      <span
+                        className="avatar"
+                        data-color={colorFor(actor.id)}
+                        aria-hidden="true"
+                      >
+                        {initialsFrom(actor.displayName)}
+                      </span>
+                      {actor.displayName}
+                    </span>
+                  ) : event.actorId === "system" ? (
+                    <span className="timeline-actor system">system</span>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
-          {snapshot.routedToParticipant.map((item) => (
-            <div className="list-card routed-card" key={item.id}>
-              <strong>Private nudge</strong>
-              <span>{item.message}</span>
-            </div>
-          ))}
-          {!snapshot.routedToParticipant.length ? (
-            <p className="empty-state">No routed insights yet.</p>
-          ) : null}
         </section>
       </div>
     </section>

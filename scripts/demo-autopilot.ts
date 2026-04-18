@@ -2,7 +2,7 @@
 /**
  * Scripted autopilot for `just demo-interactive`.
  *
- * Drives the room through the full decision → ADR → plan → handoff flow so a
+ * Drives the room through the full decision → shared decision → plan → handoff flow so a
  * viewer can watch the browser UI update on its own. Real people can jump in at
  * any time — nothing here is privileged.
  */
@@ -19,7 +19,7 @@ type Args = {
   bobId: string;
   tempo: number;
   loop: boolean;
-  /** Stop just before Alice approves the ADR, so a human can drive approvals + handoff. */
+  /** Stop just before Alice approves the shared decision, so a human can drive approvals + handoff. */
   pauseBeforeApproval: boolean;
 };
 
@@ -162,7 +162,7 @@ async function releaseClaim(
 
 async function saveAdrSection(actor: "alice" | "bob", section: AdrSectionKey, text: string) {
   const actorId = actor === "alice" ? args.aliceId : args.bobId;
-  log("✎", `${actor} edits ADR section "${section}"`);
+  log("✎", `${actor} edits shared decision section "${section}"`);
   await api(`/api/rooms/${args.roomId}/adr/sections/${section}`, {
     method: "POST",
     body: JSON.stringify({ actorId, text }),
@@ -171,7 +171,7 @@ async function saveAdrSection(actor: "alice" | "bob", section: AdrSectionKey, te
 
 async function regenerateAdr(actor: "alice" | "bob", section: AdrSectionKey) {
   const actorId = actor === "alice" ? args.aliceId : args.bobId;
-  log("↻", `${actor} regenerates ADR section "${section}"`);
+  log("↻", `${actor} refreshes section "${section}"`);
   await api(`/api/rooms/${args.roomId}/adr/sections/${section}/regenerate`, {
     method: "POST",
     body: JSON.stringify({ actorId }),
@@ -180,7 +180,7 @@ async function regenerateAdr(actor: "alice" | "bob", section: AdrSectionKey) {
 
 async function reviewAdr(actor: "alice" | "bob", section: AdrSectionKey) {
   const actorId = actor === "alice" ? args.aliceId : args.bobId;
-  log("✓", `${actor} reviews ADR section "${section}"`);
+  log("✓", `${actor} reviews section "${section}"`);
   await api(`/api/rooms/${args.roomId}/adr/sections/${section}/review`, {
     method: "POST",
     body: JSON.stringify({ actorId }),
@@ -189,7 +189,7 @@ async function reviewAdr(actor: "alice" | "bob", section: AdrSectionKey) {
 
 async function approveAdr(actor: "alice" | "bob") {
   const actorId = actor === "alice" ? args.aliceId : args.bobId;
-  log("●", `${actor} approves the ADR`);
+  log("●", `${actor} approves the shared decision`);
   await api(`/api/rooms/${args.roomId}/adr/approve`, {
     method: "POST",
     body: JSON.stringify({ actorId }),
@@ -198,7 +198,7 @@ async function approveAdr(actor: "alice" | "bob") {
 
 async function generatePlan(actor: "alice" | "bob") {
   const actorId = actor === "alice" ? args.aliceId : args.bobId;
-  log("⚙", `${actor} generates the implementation plan`);
+  log("⚙", `${actor} builds the alignment plan`);
   await api(`/api/rooms/${args.roomId}/plan/generate`, {
     method: "POST",
     body: JSON.stringify({ actorId }),
@@ -221,7 +221,7 @@ async function acceptAllPlanOwners(actor: "alice" | "bob") {
 
 async function approvePlan(actor: "alice" | "bob") {
   const actorId = actor === "alice" ? args.aliceId : args.bobId;
-  log("●", `${actor} approves the plan`);
+  log("●", `${actor} approves the alignment plan`);
   await api(`/api/rooms/${args.roomId}/plan/approve`, {
     method: "POST",
     body: JSON.stringify({ actorId }),
@@ -230,7 +230,7 @@ async function approvePlan(actor: "alice" | "bob") {
 
 async function generateHandoff(actor: "alice" | "bob") {
   const actorId = actor === "alice" ? args.aliceId : args.bobId;
-  log("📦", `${actor} ships the handoff package`);
+  log("📦", `${actor} shares the handoff package`);
   await api(`/api/rooms/${args.roomId}/handoff/generate`, {
     method: "POST",
     body: JSON.stringify({ actorId }),
@@ -255,24 +255,24 @@ async function runOnce() {
   // --- phase 1: surface the decision ------------------------------------
   await utter(
     "alice",
-    "We need to agree how humans and local coding agents converge on one ADR.",
+    "Goal: pick one chocolate cookie flavor for the bake sale that feels easy and fun for kids.",
   );
   await beat();
   await utter(
     "bob",
-    "Main worry: agents generating in parallel with no shared state.",
+    "Constraint: we can only bake one flavor today. Option: classic chocolate chip, double chocolate, or chocolate-orange. Risk: chocolate-orange may feel too surprising.",
   );
   await beat();
 
   // --- phase 2: private agents surface deltas ---------------------------
   await dropDelta(
     "alice",
-    "Heuristic + LLM hybrid keeps classification predictable under load.",
+    "Option: classic chocolate chip feels familiar, safe, and easy to explain.",
   );
   await beat();
   await dropDelta(
     "bob",
-    "Handoff should include the full event log so downstream tools can replay.",
+    "Tradeoff: double chocolate tastes richer, but it can feel too heavy for some kids.",
   );
   await beat();
 
@@ -286,52 +286,52 @@ async function runOnce() {
   await synthesize("alice");
   await beat();
 
-  // --- phase 5: write the ADR -----------------------------------------
+  // --- phase 5: write the shared decision -----------------------------
   // Populate every section (the readiness gate requires all of them to be
   // non-empty). The meatier sections get a short narrative; the boilerplate
   // sections get a single line.
   const adrPayloads: Record<AdrSectionKey, { author: "alice" | "bob"; text: string }> = {
-    title: { author: "alice", text: "Realtime Decision Alignment room" },
-    status: { author: "alice", text: "Proposed — under review in the hackathon slice." },
+    title: { author: "alice", text: "Chocolate cookie flavor choice" },
+    status: { author: "alice", text: "Proposed — quick bake sale decision." },
     context: {
       author: "alice",
-      text: "Teams ship code faster than ever but cannot agree on scope. Private agents amplify the drift.",
+      text: "We need one chocolate cookie flavor for the bake sale, and kids should understand the choice right away.",
     },
     goals: {
       author: "alice",
-      text: "Humans and agents converge on one ADR and one plan in a single session, without context leakage.",
+      text: "Pick one flavor that feels tasty, familiar, and easy to explain.",
     },
     constraints: {
       author: "bob",
-      text: "Bun + SQLite only for the slice. No CRDT, no autonomous agents, no multi-workspace UI.",
+      text: "We can bake only one flavor today. Ingredients and time should stay simple.",
     },
     options_considered: {
       author: "bob",
-      text: "A) Chat-only room. B) Heuristic + LLM hybrid (this ADR). C) Pure LLM classifier.",
+      text: "Classic chocolate chip\nDouble chocolate\nChocolate-orange",
     },
     decision: {
       author: "alice",
-      text: "Introduce a shared Realtime Decision Alignment room. Private agent deltas stay pending until a human promotes them.",
+      text: "Choose classic chocolate chip. It is the easiest crowd-pleaser for both kids and parents.",
     },
     tradeoffs: {
       author: "alice",
-      text: "Heuristic misses subtle intent (fidelity) in exchange for predictable sub-second classification (speed).",
+      text: "Double chocolate feels richer, but classic chocolate chip is easier for more kids to enjoy.",
     },
     consequences: {
       author: "bob",
-      text: "Requires a short-lived server with event log + socket invalidation; agents need a bridge plugin to submit deltas.",
+      text: "We buy simple ingredients, bake one clear batch, and label the table with one easy flavor name.",
     },
     implementation_guidance: {
       author: "bob",
-      text: "Ship the slice behind ALLOW_LOCAL_HEURISTIC_FALLBACK so the demo runs without OPENAI_API_KEY.",
+      text: "Bake a small test batch first, then make the full batch once Alice and Bob still agree.",
     },
     related_patterns: {
       author: "alice",
-      text: "Event-sourced room, snapshot-driven UI, claim/release for single-writer edits.",
+      text: "Pick the easiest crowd-pleaser. Prefer one clear choice over many confusing options.",
     },
     approvers: {
       author: "alice",
-      text: "Alice (decision owner).",
+      text: "Alice and Bob agree to the flavor choice.",
     },
   };
 
@@ -363,16 +363,16 @@ async function runOnce() {
   if (args.pauseBeforeApproval) {
     log(
       "⏸",
-      "paused — room is ready. Now approve the ADR → generate plan → accept owners → approve plan → generate handoff in the browser as Alice.",
+      "paused — room is ready. Now approve the shared decision → build plan → accept owners → approve plan → create handoff in the browser as Alice.",
     );
     return;
   }
 
-  // --- phase 6: approve ADR -------------------------------------------
+  // --- phase 6: approve the shared decision ---------------------------
   await approveAdr("alice");
   await beat();
 
-  // --- phase 7: plan ---------------------------------------------------
+  // --- phase 7: alignment plan ----------------------------------------
   await generatePlan("alice");
   await beat();
   await acceptAllPlanOwners("alice");

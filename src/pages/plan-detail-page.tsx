@@ -23,7 +23,7 @@ export function PlanDetailPage() {
         <div className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Plan detail</p>
+              <p className="eyebrow">Alignment plan</p>
               <h1>No plan yet</h1>
             </div>
             <Link
@@ -33,7 +33,7 @@ export function PlanDetailPage() {
               ← Back to room
             </Link>
           </div>
-          <p className="empty-state">Approve the ADR in the room, then generate the implementation plan.</p>
+          <p className="empty-state">Approve the shared decision in the room, then generate the alignment plan.</p>
         </div>
       </section>
     );
@@ -44,8 +44,8 @@ export function PlanDetailPage() {
       <div className="panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Plan detail</p>
-            <h1>Implementation plan</h1>
+            <p className="eyebrow">Alignment plan</p>
+            <h1>What happens next</h1>
           </div>
           <div className="row-actions">
             <span className="status-chip" data-status={plan.status}>

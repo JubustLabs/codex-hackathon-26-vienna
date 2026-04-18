@@ -11,7 +11,7 @@ import { WorkspaceOverviewPage } from "./pages/workspace-overview-page";
 
 const navItems = [
   { href: "/", label: "Workspace" },
-  { href: "/rooms/new", label: "Create room" },
+  { href: "/rooms/new", label: "New space" },
   { href: "/components", label: "Components" },
   { href: "/patterns", label: "Patterns" },
   { href: "/settings", label: "Settings" },
@@ -23,8 +23,8 @@ export function App() {
       <header className="topbar">
         <Link className="brand" to="/">
           <span className="brand-wrap">
-            <span>Realtime Decision Alignment</span>
-            <span className="brand-tag">humans steer · agents collaborate</span>
+            <span>Shared Decision Space</span>
+            <span className="brand-tag">humans steer · agents assist</span>
           </span>
         </Link>
         <nav className="topnav">
@@ -52,7 +52,7 @@ export function App() {
 
       <footer className="footer">
         <span className="footer-dot">
-          <strong>Live workspace</strong> · humans steer · agents collaborate
+          <strong>Live shared space</strong> · humans steer · agents assist
         </span>
         <span>Bun · React 19 · SQLite · POC vertical slice</span>
       </footer>

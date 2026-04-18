@@ -11,14 +11,14 @@ export function CreateRoomPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    topic: "Realtime alignment workspace",
-    decision: "How should the first POC room flow work end-to-end?",
-    goal: "Reach a shared ADR and plan without devolving into noisy shared chat.",
-    nonGoals: "CRDT editing, voice/video, autonomous decision making",
-    scope: "Vertical slice covering room, orchestrator, ADR, plan, and export",
-    successBar: "A small group can create, discuss, approve, and export one decision path",
-    topicTags: "adr,alignment,realtime,workspace,agents",
-    creatorName: "Session owner",
+    topic: "Chocolate cookie flavor",
+    decision: "Which chocolate cookie flavor should we choose for the bake sale?",
+    goal: "Pick one cookie flavor that feels obvious, tasty, and easy to explain.",
+    nonGoals: "Fancy baking techniques, nutrition debates, or offering lots of flavors at once",
+    scope: "One simple choice between classic chocolate chip, double chocolate, and chocolate-orange",
+    successBar: "Anyone can see the options, the tradeoffs, the final choice, and the next steps in under a minute",
+    topicTags: "cookies,chocolate,kids,demo,choice",
+    creatorName: "Alice",
     creatorRole: "decision_owner" as Participant["role"],
   });
 
@@ -54,13 +54,13 @@ export function CreateRoomPage() {
       <div className="panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">New decision</p>
-            <h1>Create room</h1>
+            <p className="eyebrow">New shared decision space</p>
+            <h1>Start with one clear choice</h1>
           </div>
           <Link className="button ghost" to="/">
             ← Workspace
           </Link>
-          <p>Start with a bounded decision brief. This flow also records the first room participant so the approval set starts anchored.</p>
+          <p>Keep the first question concrete. The default room is a chocolate cookie demo so the flow is easy for anyone to follow.</p>
         </div>
         <form className="stack-form" onSubmit={onSubmit}>
           <div className="overview-columns" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -111,7 +111,7 @@ export function CreateRoomPage() {
           {error ? <p className="empty-state error-state">{error}</p> : null}
           <div className="row-actions" style={{ justifyContent: "flex-end" }}>
             <button className="button primary" disabled={submitting} type="submit">
-              {submitting ? "Creating…" : "Create room →"}
+              {submitting ? "Creating…" : "Create space →"}
             </button>
           </div>
         </form>

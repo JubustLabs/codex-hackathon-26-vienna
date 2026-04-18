@@ -33,20 +33,20 @@ just dev
 
 The plugin is already listed in the repo-local marketplace at `.agents/plugins/marketplace.json`.
 
-Once installed in Codex, it starts the local MCP server declared in `.mcp.json` and exposes `georg_*` tools such as:
+Once installed in Codex, it starts the local MCP server declared in `.mcp.json` and exposes `room_*` tools such as:
 
-- `georg_health`
-- `georg_create_room_with_owner`
-- `georg_get_room_snapshot`
-- `georg_submit_agent_delta`
-- `georg_approve_adr`
-- `georg_generate_plan`
-- `georg_approve_plan`
-- `georg_generate_handoff`
+- `room_health`
+- `room_create_room_with_owner`
+- `room_get_room_snapshot`
+- `room_submit_agent_delta`
+- `room_approve_adr`
+- `room_generate_plan`
+- `room_approve_plan`
+- `room_generate_handoff`
 
 Example prompts:
 
-- `Create a new georg room and join me as the decision owner.`
+- `Create a new room and join me as the decision owner.`
 - `Inspect the current room snapshot and tell me the next gated action.`
 - `Submit a private delta to the room and promote it if it helps.`
 
