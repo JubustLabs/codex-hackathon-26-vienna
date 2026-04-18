@@ -1,7 +1,7 @@
 {
   "name": "codex-room-bridge",
   "version": "0.1.0",
-  "description": "Repo-local Codex bridge for submitting private room deltas over the agent WebSocket protocol.",
+  "description": "Repo-local Codex plugin for controlling the georg demo over the local HTTP and agent WebSocket APIs.",
   "author": {
     "name": "Jubust Labs",
     "email": "georg.kf.heiler@gmail.com",
@@ -10,25 +10,25 @@
   "homepage": "https://github.com/JubustLabs/codex-hackathon-26-vienna/tree/main/plugins/codex-room-bridge",
   "repository": "https://github.com/JubustLabs/codex-hackathon-26-vienna",
   "license": "UNLICENSED",
-  "keywords": ["codex", "realtime-room", "websocket", "hackathon"],
+  "keywords": ["codex", "realtime-room", "websocket", "mcp", "hackathon"],
   "skills": "./skills/",
   "hooks": "./hooks.json",
   "mcpServers": "./.mcp.json",
   "apps": "./.app.json",
   "interface": {
     "displayName": "Codex Room Bridge",
-    "shortDescription": "Push private agent deltas from a local Codex session into the georg room UI.",
-    "longDescription": "Thin repo-local bridge for the hackathon demo. It connects a local Codex or Claude Code style runtime to georg's dedicated /agent-ws channel, submits typed private deltas, and prints status changes when the human promotes or discards them in the browser.",
+    "shortDescription": "Control the georg room from Codex over a local MCP server and bridge private deltas.",
+    "longDescription": "Repo-local plugin for the hackathon demo. It starts a local stdio MCP server that talks to georg's HTTP API on localhost, so Codex can create rooms, join as owner, inspect snapshots, draft and approve ADRs, generate plans, and ship handoffs. It also keeps the live bridge commands for private agent deltas over /agent-ws.",
     "developerName": "Jubust Labs",
     "category": "Productivity",
-    "capabilities": ["Interactive", "Write"],
+    "capabilities": ["Interactive", "Read", "Write"],
     "websiteURL": "https://github.com/JubustLabs/codex-hackathon-26-vienna/tree/main/plugins/codex-room-bridge",
     "privacyPolicyURL": "https://github.com/JubustLabs/codex-hackathon-26-vienna",
     "termsOfServiceURL": "https://github.com/JubustLabs/codex-hackathon-26-vienna",
     "defaultPrompt": [
-      "Submit my current insight to the active room.",
-      "Open a live bridge for this participant.",
-      "Show delta status after the human review."
+      "Create a new georg room and join me as the decision owner.",
+      "Inspect the current room snapshot and tell me the next gated action.",
+      "Submit a private delta to the room and promote it if it helps."
     ],
     "brandColor": "#1C6B5A",
     "composerIcon": "./assets/icon.png",

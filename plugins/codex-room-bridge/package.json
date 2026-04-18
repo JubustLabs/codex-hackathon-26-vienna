@@ -2,5 +2,13 @@
   "name": "codex-room-bridge",
   "private": true,
   "version": "0.1.0",
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "mcp": "bun ./scripts/mcp-server.ts",
+    "smoke": "bun ./scripts/mcp-smoke-test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.3.6"
+  }
 }
