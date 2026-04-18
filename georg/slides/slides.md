@@ -1,7 +1,7 @@
 ---
 theme: seriph
-title: Realtime Alignment Workspace
-info: Agreement before generation. Codex Hackathon · Vienna · 2026
+title: "Tackling multiplayer — Realtime Decision Alignment"
+info: Humans steer. Agents collaborate. Codex Hackathon · Vienna · 2026
 class: text-center
 transition: slide-left
 mdc: true
@@ -16,10 +16,10 @@ fonts:
 
 <div class="flex items-center justify-center gap-4 mb-6">
   <span class="ra-live-dot"></span>
-  <span class="uppercase tracking-widest text-sm opacity-70">POC · vertical slice</span>
+  <span class="uppercase tracking-widest text-sm opacity-70">Tackling multiplayer · POC</span>
 </div>
 
-# Realtime Alignment Workspace
+# Realtime Decision Alignment
 
 <p class="ra-tagline mt-6 text-3xl">Humans steer. Agents collaborate.</p>
 
@@ -38,19 +38,21 @@ class: text-center
 
 # Generating code has never been easier.
 
-<h1 class="mt-10" style="font-size: 5rem; color: var(--ra-accent); font-style: italic; line-height: 1.05;">
+<h1 class="mt-8" style="font-size: 4.6rem; color: var(--ra-accent); font-style: italic; line-height: 1.05;">
   Agreeing on <em>what</em> to build<br/>is still hard.
 </h1>
+
+<p class="mt-10 text-lg opacity-70">Scoping is the multiplayer problem.</p>
 
 ---
 layout: center
 class: text-center
 ---
 
-# And right now?
+# Today, it's not collaboration —
 
-<h1 class="mt-10" style="font-size: 4.2rem; color: var(--ra-ink); line-height: 1.1;">
-  Your agents are <span style="color: var(--ra-accent); font-style: italic;">fighting</span><br/>
+<h1 class="mt-6" style="font-size: 3.8rem; color: var(--ra-ink); line-height: 1.15;">
+  your agents are <span style="color: var(--ra-accent); font-style: italic;">fighting</span><br/>
   your colleague's agents.
 </h1>
 
@@ -60,7 +62,7 @@ class: text-center
 
 # The pain we kept hitting
 
-<div class="ra-grid-2 mt-8">
+<div class="ra-grid-2 mt-6">
 
 <div>
 
@@ -93,7 +95,7 @@ class: text-center
 
 # Our thesis
 
-<p class="ra-tagline text-2xl mt-2">Real-time decision alignment — steered by humans — is possible.</p>
+<p class="ra-tagline text-2xl mt-1">Realtime decision alignment — steered by humans — is possible.</p>
 
 <v-clicks depth="2">
 
@@ -105,17 +107,15 @@ class: text-center
 
 </v-clicks>
 
-<div v-click class="mt-8 ra-tagline text-2xl">
+<div v-click class="mt-6 ra-tagline text-2xl">
   Agreement <em>before</em> generation.
 </div>
 
 ---
-layout: two-cols-header
----
 
 # The three primitives
 
-::left::
+<div class="grid grid-cols-3 gap-5 mt-6">
 
 <div class="ra-card">
 
@@ -124,13 +124,11 @@ layout: two-cols-header
 The alignment board with eight color-coded columns:<br>
 *goal · constraint · option · tradeoff · risk · open · agreement · blocker*
 
-Every utterance is classified into a node with confidence and an event trail.
+Every utterance becomes a node with confidence and an event trail.
 
 </div>
 
-::right::
-
-<div class="ra-card mb-4">
+<div class="ra-card">
 
 ### Private work
 
@@ -150,11 +148,11 @@ Assists — never decides. **Humans stay in the loop.**
 
 </div>
 
+</div>
+
 ---
 layout: center
 ---
-
-# Short video demo
 
 <video
   src="/hackathon-video.mp4"
@@ -163,11 +161,11 @@ layout: center
   loop
   muted
   playsinline
-  class="w-full rounded-xl shadow-2xl"
-  style="max-height: 62vh; border: 1px solid var(--ra-line);"
+  class="rounded-xl shadow-2xl"
+  style="max-height: 78vh; max-width: 100%; border: 1px solid var(--ra-line); display: block; margin: 0 auto;"
 />
 
-<p class="text-center opacity-70 text-sm mt-4">
+<p class="text-center opacity-70 text-xs mt-3" style="margin-bottom: 0;">
   44 seconds · a room converges on an ADR, generates a plan, ships a handoff
 </p>
 
@@ -179,7 +177,7 @@ If the video is missing, run from georg/: `just demo` (renders with Remotion, co
 
 # Live demo — the path we'll walk
 
-<div class="ra-grid-2 mt-4">
+<div class="grid grid-cols-2 gap-6 mt-4">
 
 <div>
 
@@ -187,11 +185,11 @@ If the video is missing, run from georg/: `just demo` (renders with Remotion, co
 
 1. Open <kbd>http://localhost:5173</kbd>
 2. **Create a room** with a bounded decision
-3. Post two utterances → watch the alignment board populate
+3. Post two utterances → alignment board populates
 4. Submit a **private delta** → **promote** it
-5. **Claim** an ADR section → **Regenerate** → **Review** → **Approve**
-6. **Generate plan** → **Accept owner** → **Approve plan**
-7. **Generate handoff** → download the JSON package
+5. **Claim** ADR → **Regenerate** → **Review** → **Approve**
+6. **Generate plan** → **Accept owner** → **Approve**
+7. **Generate handoff** → download JSON
 
 </v-clicks>
 
@@ -203,19 +201,17 @@ If the video is missing, run from georg/: `just demo` (renders with Remotion, co
 
 **What to look for**
 
-- The pulsing accent dot = live orchestrator
-- Presence pills with initials = who's here
+- Pulsing accent dot = live orchestrator
+- Presence pills = who's here
 - Readiness chips flipping green = gates closing
-- Quorum pips next to *Approve* = N of M owners
-- The **Next move** hint = what to do right now
+- Quorum pips = N of M owners approved
+- **Next move** hint = what to do right now
 
 </div>
 
-<div v-click class="ra-card mt-4">
+<div v-click class="ra-card mt-3 text-sm">
 
-**Failure demo**
-
-Switch mode to *draft_adr* with an unresolved blocker — the system refuses until you resolve, dissent, or mark it non-blocking.
+**Failure demo** — switch to *draft_adr* with an unresolved blocker and the system refuses until you resolve, dissent, or mark it non-blocking.
 
 </div>
 
@@ -260,7 +256,7 @@ flowchart LR
 <v-clicks>
 
 - **Humans stay in the loop** — nothing is generated until people agree
-- **Agents collaborate, don't compete** — every private delta is funneled through one shared room
+- **Agents collaborate, don't compete** — every private delta funnels through one shared room
 - **No drift** — orchestrator re-anchors to the ADR every synthesis
 - **Speed** — quorum and readiness are *visual* · no meetings to re-check status
 - **Realtime** — Bun + WebSockets · changes reach every participant in < 1s
@@ -324,9 +320,10 @@ class: text-center
   <span class="uppercase tracking-widest text-sm opacity-70">thanks</span>
 </div>
 
-# Realtime Alignment Workspace
+# Realtime Decision Alignment
 
-<p class="ra-tagline mt-6 text-3xl">Humans steer. Agents collaborate. Agreement before generation.</p>
+<p class="ra-tagline mt-6 text-3xl">Humans steer. Agents collaborate.</p>
+<p class="ra-tagline mt-2 text-xl">Agreement <em>before</em> generation.</p>
 
 <div class="pt-10 opacity-60 text-sm">
   Q &amp; A · <kbd>esc</kbd> to exit · <kbd>p</kbd> for presenter mode

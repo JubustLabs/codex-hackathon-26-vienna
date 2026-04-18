@@ -47,7 +47,7 @@ export const Outro = () => {
               fontWeight: 700,
             }}
           >
-            Realtime Alignment Workspace
+            Realtime Decision Alignment
           </span>
         </div>
         <div
@@ -77,7 +77,7 @@ export const Outro = () => {
             ...fadeUp(frame, 44, 22),
           }}
         >
-          Codex Hackathon · Vienna · 2026
+          Tackling multiplayer · Codex Hackathon · Vienna · 2026
         </div>
       </div>
     </AbsoluteFill>

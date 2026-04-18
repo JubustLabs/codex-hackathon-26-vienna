@@ -52,14 +52,14 @@ export const Reveal = () => {
               fontWeight: 600,
             }}
           >
-            POC · vertical slice
+            Tackling multiplayer · POC
           </span>
         </div>
         <h1
           style={{
             margin: 0,
             fontFamily: font.serif,
-            fontSize: 112,
+            fontSize: 128,
             fontWeight: 700,
             letterSpacing: "-0.025em",
             color: theme.ink,
@@ -67,24 +67,20 @@ export const Reveal = () => {
             ...fadeUp(frame, 36, 22, 24),
           }}
         >
-          Real-time decision alignment,
-          <br />
-          <span style={{ color: theme.accentDeep, fontStyle: "italic" }}>
-            steered by humans.
-          </span>
+          Realtime Decision Alignment
         </h1>
         <p
           style={{
-            fontFamily: font.sans,
-            fontSize: 32,
-            color: theme.muted,
-            marginTop: 40,
-            letterSpacing: "0.01em",
-            fontWeight: 500,
-            ...fadeUp(frame, 84, 22, 18),
+            fontFamily: font.serif,
+            fontStyle: "italic",
+            fontSize: 54,
+            color: theme.accentDeep,
+            marginTop: 36,
+            letterSpacing: "-0.01em",
+            ...fadeUp(frame, 76, 24, 20),
           }}
         >
-          One room. Agents collaborate. You decide.
+          Humans steer. Agents collaborate.
         </p>
       </div>
     </AbsoluteFill>

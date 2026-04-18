@@ -23,7 +23,7 @@ export function App() {
       <header className="topbar">
         <Link className="brand" to="/">
           <span className="brand-wrap">
-            <span>Realtime Alignment Workspace</span>
+            <span>Realtime Decision Alignment</span>
             <span className="brand-tag">humans steer · agents collaborate</span>
           </span>
         </Link>
