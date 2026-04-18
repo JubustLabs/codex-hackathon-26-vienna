@@ -186,8 +186,21 @@ just demo-interactive realtime-alignment-demo-auto 2500 0   # faster
 just demo-interactive realtime-alignment-demo-auto 3500 1   # keep looping the flow
 ```
 
-Stop it the same way:
+Open the printed **Alice URL** (it has `?participantId=<aliceId>` pinned) — that makes you Alice the decision owner, with full steer/approve rights. If you land on the Join overlay instead, you opened a URL that wasn't the one the script printed.
+
+### Co-pilot variant — you press the final buttons
+
+Same scripted flow, but the autopilot stops right before Alice approves the ADR, so you get to click the last-mile buttons yourself:
 
 ```bash
-just demo-stop realtime-alignment-demo-auto
+just clean
+just demo-copilot
+```
+
+You take over as Alice and do: **Approve ADR → Generate plan → Accept owner** (per workstream) **→ Approve plan → Generate handoff**. The room is fully primed — ADR sections filled, reviews in, no blockers — the gates are just waiting for your human approval.
+
+Stop any variant with:
+
+```bash
+just demo-stop realtime-alignment-demo-auto    # or -copilot, or your custom session
 ```

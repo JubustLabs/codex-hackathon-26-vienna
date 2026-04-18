@@ -4,8 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { Participant } from "@shared/contracts";
 
 import { api } from "@/lib/api";
-
-const participantKey = (roomId: string) => `georg.participant.${roomId}`;
+import { participantKey, withParticipant } from "@/lib/room-navigation";
 
 export function CreateRoomPage() {
   const navigate = useNavigate();
@@ -43,7 +42,7 @@ export function CreateRoomPage() {
       });
       const participant = await api.joinRoom(room.id, { displayName: form.creatorName, role: form.creatorRole });
       window.localStorage.setItem(participantKey(room.id), participant.id);
-      navigate(`/rooms/${room.id}`);
+      navigate(withParticipant(`/rooms/${room.id}`, participant.id));
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Failed to create room");
       setSubmitting(false);

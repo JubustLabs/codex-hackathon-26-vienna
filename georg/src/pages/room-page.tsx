@@ -12,8 +12,7 @@ import {
 
 import { useLiveRoom } from "@/hooks/use-live-room";
 import { api } from "@/lib/api";
-
-const participantKey = (roomId: string) => `georg.participant.${roomId}`;
+import { participantKey, withParticipant } from "@/lib/room-navigation";
 
 const AVATAR_COLORS = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 
@@ -223,6 +222,12 @@ export function RoomPage() {
       window.localStorage.getItem(participantKey(roomId)) ??
       undefined,
   );
+  useEffect(() => {
+    if (!roomId || !participantFromUrl) {
+      return;
+    }
+    window.localStorage.setItem(participantKey(roomId), participantFromUrl);
+  }, [participantFromUrl, roomId]);
   const { snapshot, loading, error, refresh } = useLiveRoom(
     roomId,
     localParticipant,
@@ -252,6 +257,8 @@ export function RoomPage() {
     }
     setLocalParticipant(participantFromUrl);
   }, [localParticipant, participantFromUrl]);
+
+  const roomLinkParticipantId = participantFromUrl ?? localParticipant;
 
   const canParticipate = Boolean(me && me.role !== "observer");
   const canSteer = Boolean(
@@ -577,10 +584,16 @@ export function RoomPage() {
               >
                 Synthesize now
               </button>
-              <Link className="button ghost" to={`/adrs/${roomId}`}>
+              <Link
+                className="button ghost"
+                to={withParticipant(`/adrs/${roomId}`, roomLinkParticipantId)}
+              >
                 ADR →
               </Link>
-              <Link className="button ghost" to={`/plans/${roomId}`}>
+              <Link
+                className="button ghost"
+                to={withParticipant(`/plans/${roomId}`, roomLinkParticipantId)}
+              >
                 Plan →
               </Link>
             </div>
@@ -956,7 +969,10 @@ export function RoomPage() {
               >
                 Generate handoff
               </button>
-              <Link className="button ghost" to={`/handoff/${roomId}`}>
+              <Link
+                className="button ghost"
+                to={withParticipant(`/handoff/${roomId}`, roomLinkParticipantId)}
+              >
                 Handoff →
               </Link>
             </div>

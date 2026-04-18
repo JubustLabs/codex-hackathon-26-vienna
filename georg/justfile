@@ -117,6 +117,13 @@ demo session="realtime-alignment-demo":
 demo-interactive session="realtime-alignment-demo-auto" tempo="3500" loop="0":
   DEMO_MODE=auto AUTOPILOT_TEMPO={{tempo}} AUTOPILOT_LOOP={{loop}} bash scripts/demo-live.sh "{{session}}"
 
+# Same as `demo-interactive`, but the autopilot stops right before Alice approves the ADR.
+# You take over as Alice (open the printed Alice URL) and click:
+#   Approve ADR → Generate plan → Accept owner (per workstream) → Approve plan → Generate handoff
+# Great for a live presentation where you want to BE the decision owner for the final mile.
+demo-copilot session="realtime-alignment-demo-copilot" tempo="3500":
+  DEMO_MODE=auto AUTOPILOT_TEMPO={{tempo}} AUTOPILOT_PAUSE_BEFORE_APPROVAL=1 bash scripts/demo-live.sh "{{session}}"
+
 demo-stop session="realtime-alignment-demo":
   tmux kill-session -t "{{session}}"
 

@@ -19,6 +19,8 @@ type Args = {
   bobId: string;
   tempo: number;
   loop: boolean;
+  /** Stop just before Alice approves the ADR, so a human can drive approvals + handoff. */
+  pauseBeforeApproval: boolean;
 };
 
 function parseArgs(argv: string[]): Args {
@@ -46,6 +48,7 @@ function parseArgs(argv: string[]): Args {
     bobId: required("bob-id"),
     tempo: Number(map.get("tempo") ?? "3500"),
     loop: map.get("loop") === "true",
+    pauseBeforeApproval: map.get("pause-before-approval") === "true",
   };
 }
 
@@ -356,6 +359,14 @@ async function runOnce() {
     await reviewAdr("alice", section).catch(() => {});
   }
   await beat();
+
+  if (args.pauseBeforeApproval) {
+    log(
+      "⏸",
+      "paused — room is ready. Now approve the ADR → generate plan → accept owners → approve plan → generate handoff in the browser as Alice.",
+    );
+    return;
+  }
 
   // --- phase 6: approve ADR -------------------------------------------
   await approveAdr("alice");

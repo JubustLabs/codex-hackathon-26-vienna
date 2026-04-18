@@ -12,6 +12,22 @@ OPEN_BROWSER="${OPEN_BROWSER:-1}"
 DEMO_MODE="${DEMO_MODE:-manual}"
 AUTOPILOT_TEMPO="${AUTOPILOT_TEMPO:-3500}"
 AUTOPILOT_LOOP="${AUTOPILOT_LOOP:-0}"
+AUTOPILOT_PAUSE_BEFORE_APPROVAL="${AUTOPILOT_PAUSE_BEFORE_APPROVAL:-0}"
+
+wait_for_url() {
+  local url="$1"
+  local label="$2"
+
+  for _ in $(seq 1 90); do
+    if curl -fsS "$url" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "$label did not become ready at $url" >&2
+  return 1
+}
 
 if ! command -v tmux >/dev/null 2>&1; then
   echo "tmux is required for just demo" >&2
@@ -43,15 +59,12 @@ INFO_PANE="$(tmux split-window -v -P -F '#{pane_id}' -t "$BOB_PANE" -c "$ROOT_DI
 tmux send-keys -t "$MAIN_PANE" 'export ALLOW_LOCAL_HEURISTIC_FALLBACK=1' C-m
 tmux send-keys -t "$MAIN_PANE" 'just dev' C-m
 
-for _ in $(seq 1 90); do
-  if curl -fsS "$BASE_URL/api/rooms" >/dev/null 2>&1; then
-    break
-  fi
-  sleep 1
-done
+if ! wait_for_url "$BASE_URL/api/rooms" "Server"; then
+  tmux kill-session -t "$SESSION_NAME" || true
+  exit 1
+fi
 
-if ! curl -fsS "$BASE_URL/api/rooms" >/dev/null 2>&1; then
-  echo "Server did not become ready at $BASE_URL" >&2
+if ! wait_for_url "$APP_URL" "Frontend"; then
   tmux kill-session -t "$SESSION_NAME" || true
   exit 1
 fi
@@ -109,6 +122,9 @@ if [ "$DEMO_MODE" = "auto" ]; then
   if [ "$AUTOPILOT_LOOP" = "1" ]; then
     AUTOPILOT_CMD="$AUTOPILOT_CMD --loop"
   fi
+  if [ "$AUTOPILOT_PAUSE_BEFORE_APPROVAL" = "1" ]; then
+    AUTOPILOT_CMD="$AUTOPILOT_CMD --pause-before-approval"
+  fi
   INFO_SCRIPT="$(cat <<EOF
 clear
 printf 'Realtime Decision Alignment — interactive autopilot\n\n'
@@ -155,7 +171,10 @@ EOF
 )"
 fi
 
-tmux send-keys -t "$INFO_PANE" "$INFO_SCRIPT" C-m
+HELPER_SCRIPT="$(mktemp "${TMPDIR:-/tmp}/realtime-alignment-demo.${SESSION_NAME}.XXXXXX.sh")"
+printf '%s\n' "$INFO_SCRIPT" >"$HELPER_SCRIPT"
+chmod +x "$HELPER_SCRIPT"
+tmux send-keys -t "$INFO_PANE" "bash \"$HELPER_SCRIPT\"" C-m
 
 if [ "$OPEN_BROWSER" = "1" ] && command -v open >/dev/null 2>&1; then
   open "$ALICE_URL" >/dev/null 2>&1 || true

@@ -46,16 +46,37 @@ export function useLiveRoom(
       return;
     }
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(
-      `${protocol}//${window.location.host}/ws?roomId=${roomId}${viewerId ? `&participantId=${viewerId}` : ""}`,
-    );
-    socket.addEventListener("message", (event) => {
-      const payload = JSON.parse(event.data) as RoomSocketServerMessage;
-      if (payload.type === "room.invalidate") {
+    const url = `${protocol}//${window.location.host}/ws?roomId=${roomId}${viewerId ? `&participantId=${viewerId}` : ""}`;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const connect = () => {
+      if (cancelled) return;
+      socket = new WebSocket(url);
+      socket.addEventListener("open", () => {
+        // On (re)connect, pull the latest snapshot so we don't miss events.
         void refresh();
-      }
-    });
-    return () => socket.close();
+      });
+      socket.addEventListener("message", (event) => {
+        const payload = JSON.parse(event.data) as RoomSocketServerMessage;
+        if (payload.type === "room.invalidate") {
+          void refresh();
+        }
+      });
+      socket.addEventListener("close", () => {
+        if (cancelled) return;
+        reconnectTimer = setTimeout(connect, 1500);
+      });
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      socket?.close();
+    };
   }, [roomId, viewerId, refresh]);
 
   return {
