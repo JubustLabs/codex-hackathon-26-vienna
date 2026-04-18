@@ -129,9 +129,9 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 
 ### 7.2 During the session
 1. Humans type ideas, constraints, tradeoffs.
-2. The classifier (Haiku) tags each utterance with candidate alignment-node deltas.
+2. The classifier (`gpt-5.4-nano` or `gpt-5-mini`) tags each utterance with candidate alignment-node deltas.
 3. Participant agents and the classifier turn local reasoning into typed deltas.
-4. The orchestrator (Sonnet) runs every 10s over the last window + current alignment snapshot, emitting a single `orchestrator_update`.
+4. The orchestrator (`gpt-5.4` or `gpt-5.4-mini`) runs every 10s over the last window + current alignment snapshot, emitting a single `orchestrator_update`.
 5. The alignment board updates with: goals, constraints, options, tradeoffs, risks, open questions, agreements, unresolved differences.
 6. The orchestrator highlights where one person's proposal is relevant to another person's blocker or domain concern.
 7. Pattern panel surfaces matches with a short "why this" justification.
@@ -184,9 +184,9 @@ React Client(s)
         -> Revision Service (ADR / subdecision / plan snapshots)
         -> Guardrail Service (workspace defaults + room overrides)
         -> Component Catalog Service (manifest/repo scan + confirmation state)
-        -> Classifier Worker (per-utterance, Haiku)
+        -> Classifier Worker (per-utterance, GPT-5 mini/nano)
         -> Agent Gateway (per-human private agent sessions)
-        -> Orchestrator Worker (windowed, Sonnet)
+        -> Orchestrator Worker (windowed, GPT-5.4)
         -> ADR Compiler (on-demand)
         -> Plan Generator (on-demand)
         -> Pattern Service (tag-match over seeded JSON)
@@ -199,7 +199,7 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 - **Frontend:** React 19 + React Router (already in repo) + Vite
 - **Backend:** Bun server exposing HTTP + WebSocket from the same process
 - **Persistence:** **SQLite** (not Postgres — zero-ops for the demo; migrate later if needed)
-- **LLM:** Anthropic SDK and OpenAI Responses API. Primary Anthropic path: Claude Sonnet 4.6 for synthesis/drafting, Claude Haiku 4.5 for per-delta classification. OpenAI parity path: `gpt-5.4` / `gpt-5.4-mini` for synthesis and drafting, `gpt-5.4-nano` or `gpt-5-mini` for per-delta classification
+- **LLM:** OpenAI Responses API only. Use `gpt-5.4` or `gpt-5.4-mini` for orchestration and drafting, and `gpt-5.4-nano` or `gpt-5-mini` for per-delta classification
 - **Auth:** magic-link + room token. No SSO.
 - **Deployment:** single host (Fly.io or equivalent). One `.env`. One process.
 
@@ -222,7 +222,7 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 Room lifecycle, presence, message fanout, claim bookkeeping, permission checks, audit events.
 
 ### 11.2 Classifier worker
-Runs per utterance. Small Haiku prompt: given utterance + last alignment snapshot, emit zero or more typed deltas (see §13.1) with confidence and a `novelty_hash` over the normalized text. Output is pushed to the working layer, not published to the shared layer.
+Runs per utterance. Small GPT classifier prompt: given utterance + last alignment snapshot, emit zero or more typed deltas (see §13.1) with confidence and a `novelty_hash` over the normalized text. Output is pushed to the working layer, not published to the shared layer.
 
 Cost profile: ~500 input + 200 output tokens per call. Fires only on human utterances (not orchestrator output, not claim events).
 
@@ -239,7 +239,7 @@ Template-driven, LLM-filled. Input: current alignment snapshot + ADR state + cur
 One-shot from an approved ADR revision. Template in §16. Emits a draft implementation plan with workstream-level granularity, reuse suggestions, and any required guardrail exception slots. Never runs automatically — humans trigger after ADR approval.
 
 ### 11.7 Pattern service
-Reads `data/patterns.json` at boot. Tag-match + substring match over problem statement. Returns top 5 with a one-line "why this matches" from Haiku. No embeddings, no ranking, no promotion workflow in the POC.
+Reads `data/patterns.json` at boot. Tag-match + substring match over problem statement. Returns top 5 with a one-line "why this matches" from a lightweight GPT model. No embeddings, no ranking, no promotion workflow in the POC.
 
 ### 11.8 Guardrail service
 Stores workspace-level defaults and room-level overrides. For the demo, it can seed from `data/guardrails.json` and persist active values in SQLite. Exposes hard constraints, soft preferences, and reuse policy to the orchestrator, ADR compiler, and plan generator.
@@ -383,10 +383,8 @@ Every synthesis carries pointers back to the raw events it drew from. This is ho
 
 ### 13.6 Latency budget
 
-- Classifier (Haiku): p50 ≤ 800ms, p95 ≤ 2s
-- Orchestrator (Sonnet): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
-- Classifier (OpenAI `gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): target the same p50 ≤ 800ms, p95 ≤ 2s budget
-- Orchestrator (OpenAI `gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): target the same p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Classifier (`gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): p50 ≤ 800ms, p95 ≤ 2s
+- Orchestrator (`gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
 - WebSocket fanout: ≤ 100ms
 
 These are product latency targets, not vendor guarantees. OpenAI model selection should prefer the smallest model that meets orchestrator-quality evals and the routing guidance in §23.1.
@@ -414,7 +412,7 @@ Ship a seeded flat library. No promotion workflow, no embeddings, no ranking sig
 
 - **Storage:** `data/patterns.json`, ~10 curated entries at launch.
 - **Schema (POC):** `id, title, problem, tags[], approach, preferred_libraries[], anti_patterns[], references[]`. No versioning, no owner, no applicability rules.
-- **Retrieval:** tag match + substring on problem statement. Haiku adds a one-line "why this matches" at display time.
+- **Retrieval:** tag match + substring on problem statement. A lightweight GPT model adds a one-line "why this matches" at display time.
 - **Promotion:** out of scope. At most, a human can mark "this session produced a pattern worth capturing" → writes a TODO to a file for later human curation.
 
 ### 14.2 Workspace guardrails
@@ -855,13 +853,6 @@ The ADR draft pane should expose:
 
 ### 23.1 Model routing
 
-- **Classifier per utterance:** Claude Haiku 4.5 — fast, cheap, small prompt
-- **Orchestrator synthesis:** Claude Sonnet 4.6 — better instruction-following on structured output
-- **ADR section draft:** Claude Sonnet 4.6 — one-shot, on demand
-- **Plan generation:** Claude Sonnet 4.6 — one-shot, on an approved ADR revision
-
-OpenAI parity routing:
-
 - **Classifier per utterance:** `gpt-5.4-nano` first, `gpt-5-mini` as fallback when the nano path misses extraction quality; keep `reasoning.effort` at `none` or `minimal`
 - **Orchestrator synthesis:** `gpt-5.4-mini` first for lower latency; escalate to `gpt-5.4` only if evals show materially better synthesis / blocker detection; start with `reasoning.effort: low`
 - **ADR section draft:** `gpt-5.4-mini` for fast drafts, `gpt-5.4` for higher-stakes sections such as `Decision`, `Tradeoffs`, and `Implementation guidance`
@@ -879,10 +870,10 @@ Every orchestrator call reuses the same system prompt + alignment-schema stanza 
 
 A 45-minute session, 3 humans, moderate activity:
 
-- ~120 utterances × Haiku classifier (~500 in / 200 out each) ≈ $0.10
-- ~30 orchestrator calls (windows with novelty, out of 270 possible) × Sonnet (~3k in / 500 out each) ≈ $0.45
-- 1 ADR draft-all + 4 section regens × Sonnet ≈ $0.15
-- 1 plan generation × Sonnet ≈ $0.05
+- ~120 utterances × GPT classifier (~500 in / 200 out each) ≈ estimate after first real run
+- ~30 orchestrator calls (windows with novelty, out of 270 possible) × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
+- 1 ADR draft-all + 4 section regens × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
+- 1 plan generation × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
 
 Target: **under $1 per session** at POC scale. If this blows out, the orchestrator trigger (§13.2) is the first lever — raise the novelty threshold, lengthen the window.
 
