@@ -169,3 +169,25 @@ Stop the session:
 ```bash
 just demo-stop
 ```
+
+### Zero-touch variant
+
+Prefer to just point the browser at the room and watch it converge?
+
+```bash
+just clean
+just demo-interactive
+```
+
+Same scaffolding as `just demo` (fresh DB, app server, two bridge panes, two room URLs) plus an autopilot pane that walks the room from first utterance all the way to handoff — no typing needed. The whole pass takes about 60–80 seconds at default tempo. Tune it with:
+
+```bash
+just demo-interactive realtime-alignment-demo-auto 2500 0   # faster
+just demo-interactive realtime-alignment-demo-auto 3500 1   # keep looping the flow
+```
+
+Stop it the same way:
+
+```bash
+just demo-stop realtime-alignment-demo-auto
+```

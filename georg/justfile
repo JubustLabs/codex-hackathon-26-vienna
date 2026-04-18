@@ -109,6 +109,14 @@ slides-export: ensure-slides ensure-slide-video
 demo session="realtime-alignment-demo":
   bash scripts/demo-live.sh "{{session}}"
 
+# Fully automated demo: same setup as `just demo`, but an autopilot drives the room
+# through utterances → private deltas → promotes → synthesize → ADR → plan → handoff.
+# You just open the browser URLs and watch.
+#   tempo   delay between autopilot steps in ms (default 3500)
+#   loop    1 = restart the scripted flow after each pass (default 0)
+demo-interactive session="realtime-alignment-demo-auto" tempo="3500" loop="0":
+  DEMO_MODE=auto AUTOPILOT_TEMPO={{tempo}} AUTOPILOT_LOOP={{loop}} bash scripts/demo-live.sh "{{session}}"
+
 demo-stop session="realtime-alignment-demo":
   tmux kill-session -t "{{session}}"
 

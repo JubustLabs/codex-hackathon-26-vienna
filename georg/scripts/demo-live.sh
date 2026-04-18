@@ -7,6 +7,11 @@ BASE_URL="${BASE_URL:-http://localhost:3001}"
 APP_URL="${APP_URL:-http://localhost:5173}"
 ATTACH="${ATTACH:-1}"
 OPEN_BROWSER="${OPEN_BROWSER:-1}"
+# DEMO_MODE=manual  → two bridge panes wait for hand-typed input
+# DEMO_MODE=auto    → autopilot drives the full flow, bridges still run so deltas are visible
+DEMO_MODE="${DEMO_MODE:-manual}"
+AUTOPILOT_TEMPO="${AUTOPILOT_TEMPO:-3500}"
+AUTOPILOT_LOOP="${AUTOPILOT_LOOP:-0}"
 
 if ! command -v tmux >/dev/null 2>&1; then
   echo "tmux is required for just demo" >&2
@@ -99,9 +104,35 @@ BOB_URL="$APP_URL/rooms/$ROOM_ID?participantId=$BOB_ID"
 tmux send-keys -t "$ALICE_PANE" "just bridge-watch $ROOM_ID $ALICE_ID alice-codex" C-m
 tmux send-keys -t "$BOB_PANE" "just bridge-watch $ROOM_ID $BOB_ID bob-codex" C-m
 
-INFO_SCRIPT="$(cat <<EOF
+if [ "$DEMO_MODE" = "auto" ]; then
+  AUTOPILOT_CMD="bun scripts/demo-autopilot.ts --server \"$BASE_URL\" --room-id \"$ROOM_ID\" --alice-id \"$ALICE_ID\" --bob-id \"$BOB_ID\" --tempo $AUTOPILOT_TEMPO"
+  if [ "$AUTOPILOT_LOOP" = "1" ]; then
+    AUTOPILOT_CMD="$AUTOPILOT_CMD --loop"
+  fi
+  INFO_SCRIPT="$(cat <<EOF
 clear
-printf 'Realtime Alignment demo is ready.\n\n'
+printf 'Realtime Decision Alignment — interactive autopilot\n\n'
+printf 'Room id: %s\n' '$ROOM_ID'
+printf 'Alice: %s\n' '$ALICE_URL'
+printf 'Bob:   %s\n\n' '$BOB_URL'
+printf 'Panes:\n'
+printf '  top-left: app server + frontend\n'
+printf '  bottom-left: Alice bridge (watches private deltas)\n'
+printf '  right: Bob bridge (watches private deltas)\n'
+printf '  bottom-right: autopilot (this pane)\n\n'
+printf 'Autopilot: drives utterances → private deltas → promotes →\n'
+printf '           synthesize → ADR → plan → handoff. Starts in 4s…\n\n'
+sleep 4
+$AUTOPILOT_CMD
+printf '\nautopilot done. Press Enter for a shell.\n'
+read _
+exec bash
+EOF
+)"
+else
+  INFO_SCRIPT="$(cat <<EOF
+clear
+printf 'Realtime Decision Alignment demo is ready.\n\n'
 printf 'Room id: %s\n' '$ROOM_ID'
 printf 'Alice participant id: %s\n' '$ALICE_ID'
 printf 'Bob participant id: %s\n\n' '$BOB_ID'
@@ -122,6 +153,7 @@ printf '  tmux attach -t %s\n' '$SESSION_NAME'
 exec bash
 EOF
 )"
+fi
 
 tmux send-keys -t "$INFO_PANE" "$INFO_SCRIPT" C-m
 
