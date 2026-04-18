@@ -63,6 +63,34 @@ just video-dev
 - `just video-still`: renders `video/out/thumbnail.png`
 - `just video-dev`: opens the Remotion studio
 
+### Long video (prologue + live autopilot capture)
+
+A second, longer composition plays the full short pitch video then shows a pre-recorded browser capture of the autopilot driving a real room — ADR filling in, plan generating, handoff shipping — with overlay captions.
+
+One command does everything:
+
+```bash
+just clean
+just video-long-pipeline
+```
+
+This starts the dev server, records the browser running the autopilot into `video/public/autopilot-capture.webm`, then renders `video/out/realtime-alignment-long.mp4`.
+
+If you want to iterate:
+
+```bash
+# Terminal 1 — dev server
+export ALLOW_LOCAL_HEURISTIC_FALLBACK=1
+just dev
+
+# Terminal 2 — record just the browser capture
+just video-capture            # 90s window at default tempo
+just video-capture 120 2800   # longer window, faster autopilot
+
+# Anytime — re-render the long video against the current capture
+just video-long-render
+```
+
 ## C. Basic App Flow
 
 Run these from `georg/`.
@@ -179,7 +207,7 @@ just clean
 just demo-interactive
 ```
 
-Same scaffolding as `just demo` (fresh DB, app server, two bridge panes, two room URLs) plus an autopilot pane that walks the room from first utterance all the way to handoff — no typing needed. The whole pass takes about 60–80 seconds at default tempo. Tune it with:
+Same scaffolding as `just demo` (fresh DB, app server, two bridge panes, two room URLs) plus an autopilot pane that walks the room from first utterance all the way to handoff — no typing needed. By default the launcher opens the **Alice owner URL** so the first browser window has steer/approve rights; the Bob contributor URL is still printed for an optional second tab. The whole pass takes about 60–80 seconds at default tempo. Tune it with:
 
 ```bash
 just demo-interactive realtime-alignment-demo-auto 2500 0   # faster

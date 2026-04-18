@@ -7,6 +7,7 @@ BASE_URL="${BASE_URL:-http://localhost:3001}"
 APP_URL="${APP_URL:-http://localhost:5173}"
 ATTACH="${ATTACH:-1}"
 OPEN_BROWSER="${OPEN_BROWSER:-1}"
+OPEN_BOB_BROWSER="${OPEN_BOB_BROWSER:-0}"
 # DEMO_MODE=manual  → two bridge panes wait for hand-typed input
 # DEMO_MODE=auto    → autopilot drives the full flow, bridges still run so deltas are visible
 DEMO_MODE="${DEMO_MODE:-manual}"
@@ -129,8 +130,10 @@ if [ "$DEMO_MODE" = "auto" ]; then
 clear
 printf 'Realtime Decision Alignment — interactive autopilot\n\n'
 printf 'Room id: %s\n' '$ROOM_ID'
-printf 'Alice: %s\n' '$ALICE_URL'
-printf 'Bob:   %s\n\n' '$BOB_URL'
+printf 'Open this URL as the control seat (Alice, owner):\n'
+printf '  %s\n\n' '$ALICE_URL'
+printf 'Optional second view (Bob, contributor):\n'
+printf '  %s\n\n' '$BOB_URL'
 printf 'Panes:\n'
 printf '  top-left: app server + frontend\n'
 printf '  bottom-left: Alice bridge (watches private deltas)\n'
@@ -152,9 +155,10 @@ printf 'Realtime Decision Alignment demo is ready.\n\n'
 printf 'Room id: %s\n' '$ROOM_ID'
 printf 'Alice participant id: %s\n' '$ALICE_ID'
 printf 'Bob participant id: %s\n\n' '$BOB_ID'
-printf 'Open these URLs in separate tabs or windows:\n'
-printf '  Alice: %s\n' '$ALICE_URL'
-printf '  Bob:   %s\n\n' '$BOB_URL'
+printf 'Open this URL first if you want full control:\n'
+printf '  Alice (owner): %s\n\n' '$ALICE_URL'
+printf 'Optional second tab/window:\n'
+printf '  Bob (contributor): %s\n\n' '$BOB_URL'
 printf 'What each tmux pane does:\n'
 printf '  top-left: app server and frontend\n'
 printf '  bottom-left: Alice local agent bridge\n'
@@ -171,22 +175,24 @@ EOF
 )"
 fi
 
-HELPER_SCRIPT="$(mktemp "${TMPDIR:-/tmp}/realtime-alignment-demo.${SESSION_NAME}.XXXXXX.sh")"
+HELPER_SCRIPT="$(mktemp "${TMPDIR:-/tmp}/realtime-alignment-demo.${SESSION_NAME}.XXXXXX")"
 printf '%s\n' "$INFO_SCRIPT" >"$HELPER_SCRIPT"
 chmod +x "$HELPER_SCRIPT"
 tmux send-keys -t "$INFO_PANE" "bash \"$HELPER_SCRIPT\"" C-m
 
 if [ "$OPEN_BROWSER" = "1" ] && command -v open >/dev/null 2>&1; then
   open "$ALICE_URL" >/dev/null 2>&1 || true
-  open "$BOB_URL" >/dev/null 2>&1 || true
+  if [ "$OPEN_BOB_BROWSER" = "1" ]; then
+    open "$BOB_URL" >/dev/null 2>&1 || true
+  fi
 fi
 
 tmux select-layout -t "$SESSION_NAME":demo tiled >/dev/null 2>&1 || true
 
 printf 'tmux session: %s\n' "$SESSION_NAME"
 printf 'room id: %s\n' "$ROOM_ID"
-printf 'alice url: %s\n' "$ALICE_URL"
-printf 'bob url: %s\n' "$BOB_URL"
+printf 'control url (alice owner): %s\n' "$ALICE_URL"
+printf 'optional url (bob contributor): %s\n' "$BOB_URL"
 printf '\nAttach with:\n  tmux attach -t %s\n' "$SESSION_NAME"
 
 if [ "$ATTACH" = "1" ]; then

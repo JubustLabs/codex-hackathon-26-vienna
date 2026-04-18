@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "bun x remotion studio src/index.ts",
     "build": "bun x remotion render src/index.ts RealtimeAlignment out/realtime-alignment.mp4",
+    "build-long": "bun x remotion render src/index.ts RealtimeAlignmentLong out/realtime-alignment-long.mp4",
     "still": "bun x remotion still src/index.ts RealtimeAlignment out/thumbnail.png --frame=360",
     "typecheck": "tsc --noEmit"
   },

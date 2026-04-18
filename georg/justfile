@@ -85,6 +85,47 @@ video-render: ensure-video
 video-still: ensure-video
   cd video && bun run still
 
+# Record a clean capture of the autopilot flow in the browser.
+# Requires the dev servers to be running in another terminal:
+#   export ALLOW_LOCAL_HEURISTIC_FALLBACK=1 && just dev
+# Output: video/public/autopilot-capture.webm
+#   duration   total seconds to record (default 90)
+#   tempo      autopilot step delay in ms (default 3200)
+video-capture duration="90" tempo="3200":
+  mkdir -p video/public
+  bun scripts/record-autopilot.ts --duration {{duration}} --tempo {{tempo}}
+
+# Render the long video (prologue + autopilot capture + outro) to
+# video/out/realtime-alignment-long.mp4. Expects video/public/autopilot-capture.webm to exist.
+video-long-render: ensure-video
+  cd video && bun run build-long
+
+# Full pipeline: start server in the background, wait, capture, stop, render.
+# Leaves the db/ files behind (or run `just clean` first for a pristine room).
+video-long-pipeline: ensure-app ensure-video
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cleanup() {
+    if [[ -n "${DEV_PID:-}" ]]; then
+      kill "$DEV_PID" 2>/dev/null || true
+      wait "$DEV_PID" 2>/dev/null || true
+    fi
+  }
+  trap cleanup EXIT
+  export ALLOW_LOCAL_HEURISTIC_FALLBACK=1
+  bun run dev >/tmp/realtime-alignment-dev.log 2>&1 &
+  DEV_PID=$!
+  echo "• dev server pid=$DEV_PID (log: /tmp/realtime-alignment-dev.log)"
+  for _ in $(seq 1 60); do
+    if curl -fsS http://localhost:3001/api/rooms >/dev/null 2>&1; then break; fi
+    sleep 1
+  done
+  mkdir -p video/public
+  bun scripts/record-autopilot.ts --duration 90 --tempo 3200
+  cleanup
+  DEV_PID=
+  cd video && bun run build-long
+
 # --- slides (Slidev) ------------------------------------------------------
 
 # Install slide-deck deps.
