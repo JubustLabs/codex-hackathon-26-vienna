@@ -1161,12 +1161,20 @@ export class AppStore {
       .slice(0, 5)
       .map((event) => event.summary);
     const result = await this.adapter.synthesize(snapshot, recentSummaries);
-    // LLM output is untrusted: drop feedback items whose participantId is
-    // missing, empty, or doesn't match a real room participant. Otherwise we
-    // hit `NOT NULL constraint failed: routing_items.participant_id` or store
-    // routing rows pointing at hallucinated participants.
+    // LLM output is untrusted: the model sometimes returns an object or a
+    // string (or omits the field entirely) where we declared an array. Coerce
+    // first, then drop feedback items whose participantId is missing, empty,
+    // or doesn't match a real room participant — otherwise we hit
+    // `targetedFeedback.filter is not a function` or the NOT NULL constraint
+    // on routing_items.participant_id.
     const participantIds = new Set(snapshot.participants.map((p) => p.id));
-    const targetedFeedback = result.targetedFeedback.filter(
+    const rawTargetedFeedback = Array.isArray(result.targetedFeedback)
+      ? result.targetedFeedback
+      : [];
+    const rawRoutedInsights = Array.isArray(result.routedInsights)
+      ? result.routedInsights
+      : [];
+    const targetedFeedback = rawTargetedFeedback.filter(
       (item): item is typeof item =>
         typeof item?.participantId === "string" &&
         item.participantId.length > 0 &&
@@ -1177,10 +1185,11 @@ export class AppStore {
     const update = {
       id: crypto.randomUUID(),
       roomId,
-      synthesis: result.synthesis,
-      suggestedNextMove: result.suggestedNextMove,
+      synthesis: typeof result.synthesis === "string" ? result.synthesis : "",
+      suggestedNextMove:
+        typeof result.suggestedNextMove === "string" ? result.suggestedNextMove : null,
       targetedFeedback,
-      routedInsights: result.routedInsights,
+      routedInsights: rawRoutedInsights,
       sourceEventIds: snapshot.recentEvents
         .slice(0, 5)
         .map((event) => event.id),
