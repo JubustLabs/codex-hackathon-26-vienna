@@ -1138,12 +1138,25 @@ export class AppStore {
       .slice(0, 5)
       .map((event) => event.summary);
     const result = await this.adapter.synthesize(snapshot, recentSummaries);
+    // LLM output is untrusted: drop feedback items whose participantId is
+    // missing, empty, or doesn't match a real room participant. Otherwise we
+    // hit `NOT NULL constraint failed: routing_items.participant_id` or store
+    // routing rows pointing at hallucinated participants.
+    const participantIds = new Set(snapshot.participants.map((p) => p.id));
+    const targetedFeedback = result.targetedFeedback.filter(
+      (item): item is typeof item =>
+        typeof item?.participantId === "string" &&
+        item.participantId.length > 0 &&
+        participantIds.has(item.participantId) &&
+        typeof item.message === "string" &&
+        item.message.trim().length > 0,
+    );
     const update = {
       id: crypto.randomUUID(),
       roomId,
       synthesis: result.synthesis,
       suggestedNextMove: result.suggestedNextMove,
-      targetedFeedback: result.targetedFeedback,
+      targetedFeedback,
       routedInsights: result.routedInsights,
       sourceEventIds: snapshot.recentEvents
         .slice(0, 5)
@@ -1153,7 +1166,7 @@ export class AppStore {
     db.prepare(
       "INSERT INTO orchestrator_updates (id, room_id, json) VALUES (?, ?, ?)",
     ).run(update.id, roomId, JSON.stringify(update));
-    for (const item of result.targetedFeedback) {
+    for (const item of targetedFeedback) {
       const routingItem = {
         id: crypto.randomUUID(),
         participantId: item.participantId,

@@ -1,4 +1,4 @@
-import { AbsoluteFill, OffthreadVideo, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, OffthreadVideo, interpolate, staticFile, useCurrentFrame } from "remotion";
 
 import { font, theme } from "../lib/theme";
 import { clamp } from "../lib/motion";
@@ -16,6 +16,31 @@ const CAPTIONS: Caption[] = [
   { at: 46, hold: 10, kicker: "STEP 6 · PLAN", body: "Workstreams, owners, first step — ready for execution." },
   { at: 58, hold: 12, kicker: "STEP 7 · HANDOFF", body: "One JSON envelope. One decision, not four divergent ones." },
 ];
+
+// Camera waypoints for a Ken-Burns pan across the captured room UI so the
+// viewer can actually see what's happening. focusX/Y are normalized (0..1)
+// positions on the captured frame (0.5, 0.5 = dead center). The room layout is
+// a three-column grid — left rail ≈ 0.0–0.18, center ≈ 0.18–0.82, right rail
+// ≈ 0.82–1.0 — so pans target the column where the active UI element lives.
+type CameraKey = { at: number; zoom: number; focusX: number; focusY: number };
+
+const CAMERA_KEYS: CameraKey[] = [
+  { at: 0, zoom: 1.02, focusX: 0.5, focusY: 0.5 },
+  { at: 60, zoom: 1.45, focusX: 0.32, focusY: 0.4 },
+  { at: 300, zoom: 1.55, focusX: 0.5, focusY: 0.5 },
+  { at: 540, zoom: 1.55, focusX: 0.5, focusY: 0.55 },
+  { at: 780, zoom: 1.4, focusX: 0.5, focusY: 0.42 },
+  { at: 1020, zoom: 1.55, focusX: 0.82, focusY: 0.42 },
+  { at: 1440, zoom: 1.5, focusX: 0.8, focusY: 0.58 },
+  { at: 1800, zoom: 1.4, focusX: 0.72, focusY: 0.68 },
+  { at: 2100, zoom: 1.08, focusX: 0.5, focusY: 0.5 },
+];
+
+const CAMERA_FRAMES = CAMERA_KEYS.map((k) => k.at);
+const CAMERA_ZOOMS = CAMERA_KEYS.map((k) => k.zoom);
+const CAMERA_FX = CAMERA_KEYS.map((k) => k.focusX);
+const CAMERA_FY = CAMERA_KEYS.map((k) => k.focusY);
+const CAMERA_EASING = Easing.inOut(Easing.cubic);
 
 const CAPTURE_SECONDS = 72;
 const FPS = 30;
@@ -93,17 +118,57 @@ export const DemoCapture = () => {
           opacity: vignette,
         }}
       >
-        <OffthreadVideo
-          src={staticFile("autopilot-capture.webm")}
-          muted
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        <CameraStage frame={frame} />
       </div>
 
       <CaptionStrip frame={frame} />
     </AbsoluteFill>
   );
 };
+
+function CameraStage({ frame }: { frame: number }) {
+  // Interpolate zoom + focal point across waypoints with a cubic in/out ease so
+  // the pan feels cinematic rather than linear. transform-origin stays at 0 0
+  // so the translate math (below) is a straight "move focal point to center"
+  // calculation rather than depending on the element's current midpoint.
+  const zoom = interpolate(frame, CAMERA_FRAMES, CAMERA_ZOOMS, {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: CAMERA_EASING,
+  });
+  const focusX = interpolate(frame, CAMERA_FRAMES, CAMERA_FX, {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: CAMERA_EASING,
+  });
+  const focusY = interpolate(frame, CAMERA_FRAMES, CAMERA_FY, {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: CAMERA_EASING,
+  });
+
+  // With transform-origin (0,0), a point at (fx*W, fy*H) in the unscaled
+  // element lands at (zoom*fx*W + tx*W, zoom*fy*H + ty*H) after
+  // `translate(tx,ty) scale(zoom)`. Setting that equal to (0.5W, 0.5H) gives
+  // tx = 0.5 - zoom*focusX, ty = 0.5 - zoom*focusY.
+  const tx = (0.5 - zoom * focusX) * 100;
+  const ty = (0.5 - zoom * focusY) * 100;
+
+  return (
+    <OffthreadVideo
+      src={staticFile("autopilot-capture.webm")}
+      muted
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        transformOrigin: "0 0",
+        transform: `translate(${tx}%, ${ty}%) scale(${zoom})`,
+        willChange: "transform",
+      }}
+    />
+  );
+}
 
 function CaptionStrip({ frame }: { frame: number }) {
   const activeCaption = [...CAPTIONS]
