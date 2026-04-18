@@ -10,6 +10,7 @@ import {
   type ComponentEntry,
   type Guardrail,
   type OwnershipClaim,
+  type PendingAgentDelta,
   type Participant,
   type Pattern,
   type PlanSectionKey,
@@ -27,24 +28,41 @@ import { db, nowIso, parseJson } from "./db";
 const claimTtlMs = 60_000;
 
 function readSeed<T>(fileName: string): T {
-  const filePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "data", fileName);
+  const filePath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "data",
+    fileName,
+  );
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
 }
 
 function emptyPlanSections() {
-  return Object.fromEntries(planSectionOrder.map((section) => [section, ""])) as Record<PlanSectionKey, string>;
+  return Object.fromEntries(
+    planSectionOrder.map((section) => [section, ""]),
+  ) as Record<PlanSectionKey, string>;
 }
 
 function emptyReviews() {
-  return Object.fromEntries(adrSectionOrder.map((section) => [section, [] as string[]])) as Record<AdrSectionKey, string[]>;
+  return Object.fromEntries(
+    adrSectionOrder.map((section) => [section, [] as string[]]),
+  ) as Record<AdrSectionKey, string[]>;
 }
 
 function normalize(text: string) {
   return text.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function hasStartedReview(adr: { status: RoomSnapshot["adr"]["status"]; reviews: Record<AdrSectionKey, string[]>; approvals: string[] }) {
-  return adr.status !== "draft" || adr.approvals.length > 0 || Object.values(adr.reviews).some((reviewers) => reviewers.length > 0);
+function hasStartedReview(adr: {
+  status: RoomSnapshot["adr"]["status"];
+  reviews: Record<AdrSectionKey, string[]>;
+  approvals: string[];
+}) {
+  return (
+    adr.status !== "draft" ||
+    adr.approvals.length > 0 ||
+    Object.values(adr.reviews).some((reviewers) => reviewers.length > 0)
+  );
 }
 
 export class AppStore {
@@ -57,25 +75,37 @@ export class AppStore {
     const patterns = readSeed<Pattern[]>("patterns.json");
     const components = readSeed<ComponentEntry[]>("components.json");
 
-    const guardrailCount = db.query("SELECT COUNT(*) AS count FROM workspace_guardrails").get() as { count: number };
+    const guardrailCount = db
+      .query("SELECT COUNT(*) AS count FROM workspace_guardrails")
+      .get() as { count: number };
     if (guardrailCount.count === 0) {
-      const insert = db.prepare("INSERT INTO workspace_guardrails (id, json) VALUES (?, ?)");
+      const insert = db.prepare(
+        "INSERT INTO workspace_guardrails (id, json) VALUES (?, ?)",
+      );
       for (const item of guardrails) {
         insert.run(item.id, JSON.stringify(item));
       }
     }
 
-    const patternCount = db.query("SELECT COUNT(*) AS count FROM patterns").get() as { count: number };
+    const patternCount = db
+      .query("SELECT COUNT(*) AS count FROM patterns")
+      .get() as { count: number };
     if (patternCount.count === 0) {
-      const insert = db.prepare("INSERT INTO patterns (id, json) VALUES (?, ?)");
+      const insert = db.prepare(
+        "INSERT INTO patterns (id, json) VALUES (?, ?)",
+      );
       for (const item of patterns) {
         insert.run(item.id, JSON.stringify(item));
       }
     }
 
-    const componentCount = db.query("SELECT COUNT(*) AS count FROM components").get() as { count: number };
+    const componentCount = db
+      .query("SELECT COUNT(*) AS count FROM components")
+      .get() as { count: number };
     if (componentCount.count === 0) {
-      const insert = db.prepare("INSERT INTO components (id, json) VALUES (?, ?)");
+      const insert = db.prepare(
+        "INSERT INTO components (id, json) VALUES (?, ?)",
+      );
       for (const item of components) {
         insert.run(item.id, JSON.stringify(item));
       }
@@ -83,22 +113,32 @@ export class AppStore {
   }
 
   listRooms() {
-    const rows = db.query("SELECT json FROM rooms ORDER BY json_extract(json, '$.createdAt') DESC").all() as Array<{ json: string }>;
+    const rows = db
+      .query(
+        "SELECT json FROM rooms ORDER BY json_extract(json, '$.createdAt') DESC",
+      )
+      .all() as Array<{ json: string }>;
     return rows.map((row) => parseJson<RoomSummary>(row.json));
   }
 
   getGuardrails() {
-    const rows = db.query("SELECT json FROM workspace_guardrails").all() as Array<{ json: string }>;
+    const rows = db
+      .query("SELECT json FROM workspace_guardrails")
+      .all() as Array<{ json: string }>;
     return rows.map((row) => parseJson<Guardrail>(row.json));
   }
 
   getPatterns() {
-    const rows = db.query("SELECT json FROM patterns").all() as Array<{ json: string }>;
+    const rows = db.query("SELECT json FROM patterns").all() as Array<{
+      json: string;
+    }>;
     return rows.map((row) => parseJson<Pattern>(row.json));
   }
 
   getComponents() {
-    const rows = db.query("SELECT json FROM components").all() as Array<{ json: string }>;
+    const rows = db.query("SELECT json FROM components").all() as Array<{
+      json: string;
+    }>;
     return rows.map((row) => parseJson<ComponentEntry>(row.json));
   }
 
@@ -110,11 +150,27 @@ export class AppStore {
       createdAt: nowIso(),
     };
 
-    db.prepare("INSERT INTO rooms (id, json) VALUES (?, ?)").run(room.id, JSON.stringify(room));
+    db.prepare("INSERT INTO rooms (id, json) VALUES (?, ?)").run(
+      room.id,
+      JSON.stringify(room),
+    );
     db.prepare(
       "INSERT INTO adrs (id, room_id, status, sections_json, reviews_json, approvals_json) VALUES (?, ?, ?, ?, ?, ?)",
-    ).run(crypto.randomUUID(), room.id, "draft", JSON.stringify(createDefaultAdrSections()), JSON.stringify(emptyReviews()), JSON.stringify([]));
-    this.recordEvent(room.id, "system", "room.created", `Room created for ${room.topic}`, { topic: room.topic });
+    ).run(
+      crypto.randomUUID(),
+      room.id,
+      "draft",
+      JSON.stringify(createDefaultAdrSections()),
+      JSON.stringify(emptyReviews()),
+      JSON.stringify([]),
+    );
+    this.recordEvent(
+      room.id,
+      "system",
+      "room.created",
+      `Room created for ${room.topic}`,
+      { topic: room.topic },
+    );
     return room;
   }
 
@@ -131,7 +187,9 @@ export class AppStore {
         throw new Error("This room already has three decision owners.");
       }
       if (hasStartedReview(adr)) {
-        throw new Error("Cannot change the decision-owner set after ADR review has started.");
+        throw new Error(
+          "Cannot change the decision-owner set after ADR review has started.",
+        );
       }
     }
     const participant: Participant = {
@@ -142,19 +200,32 @@ export class AppStore {
       joinedAt: nowIso(),
       lastSeenAt: nowIso(),
     };
-    db.prepare("INSERT INTO participants (id, room_id, json) VALUES (?, ?, ?)").run(participant.id, roomId, JSON.stringify(participant));
-    this.recordEvent(roomId, participant.id, "participant.joined", `${trimmedName} joined as ${role}`, { participantId: participant.id });
+    db.prepare(
+      "INSERT INTO participants (id, room_id, json) VALUES (?, ?, ?)",
+    ).run(participant.id, roomId, JSON.stringify(participant));
+    this.recordEvent(
+      roomId,
+      participant.id,
+      "participant.joined",
+      `${trimmedName} joined as ${role}`,
+      { participantId: participant.id },
+    );
     return participant;
   }
 
   touchParticipant(participantId: string) {
-    const row = db.query("SELECT json FROM participants WHERE id = ?").get(participantId) as { json?: string } | null;
+    const row = db
+      .query("SELECT json FROM participants WHERE id = ?")
+      .get(participantId) as { json?: string } | null;
     if (!row?.json) {
       return;
     }
     const participant = parseJson<Participant>(row.json);
     participant.lastSeenAt = nowIso();
-    db.prepare("UPDATE participants SET json = ? WHERE id = ?").run(JSON.stringify(participant), participantId);
+    db.prepare("UPDATE participants SET json = ? WHERE id = ?").run(
+      JSON.stringify(participant),
+      participantId,
+    );
   }
 
   setRoomMode(roomId: string, actorId: string, mode: RoomSummary["mode"]) {
@@ -164,12 +235,23 @@ export class AppStore {
     if (mode === "draft_adr") {
       const snapshot = this.getRoomSnapshot(roomId, actorId);
       if (!snapshot.readiness.unresolvedDifferencesCleared) {
-        throw new Error("Resolve, dissent, or mark blockers non-blocking before moving to ADR drafting.");
+        throw new Error(
+          "Resolve, dissent, or mark blockers non-blocking before moving to ADR drafting.",
+        );
       }
     }
     room.mode = mode;
-    db.prepare("UPDATE rooms SET json = ? WHERE id = ?").run(JSON.stringify(room), roomId);
-    this.recordEvent(roomId, actorId, "room.mode_changed", `Switched room to ${mode}`, { mode });
+    db.prepare("UPDATE rooms SET json = ? WHERE id = ?").run(
+      JSON.stringify(room),
+      roomId,
+    );
+    this.recordEvent(
+      roomId,
+      actorId,
+      "room.mode_changed",
+      `Switched room to ${mode}`,
+      { mode },
+    );
     return room;
   }
 
@@ -181,13 +263,24 @@ export class AppStore {
         throw new Error("This room already has three decision owners.");
       }
       if (hasStartedReview(adr)) {
-        throw new Error("Cannot change the decision-owner set after ADR review has started.");
+        throw new Error(
+          "Cannot change the decision-owner set after ADR review has started.",
+        );
       }
       room.decisionOwnerIds = [...room.decisionOwnerIds, actorId].slice(0, 3);
-      db.prepare("UPDATE rooms SET json = ? WHERE id = ?").run(JSON.stringify(room), roomId);
-      this.recordEvent(roomId, actorId, "room.decision_owners.updated", `Decision owners updated`, {
-        decisionOwnerIds: room.decisionOwnerIds,
-      });
+      db.prepare("UPDATE rooms SET json = ? WHERE id = ?").run(
+        JSON.stringify(room),
+        roomId,
+      );
+      this.recordEvent(
+        roomId,
+        actorId,
+        "room.decision_owners.updated",
+        `Decision owners updated`,
+        {
+          decisionOwnerIds: room.decisionOwnerIds,
+        },
+      );
     }
     return room;
   }
@@ -196,7 +289,13 @@ export class AppStore {
     const actor = this.requireParticipantInRoom(roomId, actorId);
     this.assertCanParticipate(actor, "Observers are read-only in this slice.");
     this.touchParticipant(actorId);
-    const utteranceEvent = this.recordEvent(roomId, actorId, "human.utterance.created", text, { text, participantId: actorId });
+    const utteranceEvent = this.recordEvent(
+      roomId,
+      actorId,
+      "human.utterance.created",
+      text,
+      { text, participantId: actorId },
+    );
     const room = this.requireRoom(roomId);
     const deltas = await this.adapter.classifyUtterance({
       text,
@@ -211,40 +310,71 @@ export class AppStore {
         actorId,
         "classifier.delta.created",
         `${delta.nodeType}: ${delta.text}`,
-        { deltaType: delta.deltaType, text: delta.text, confidence: delta.confidence },
+        {
+          deltaType: delta.deltaType,
+          text: delta.text,
+          confidence: delta.confidence,
+        },
         [utteranceEvent.id],
       );
-      this.upsertAlignmentNode(roomId, actorId, delta.nodeType, delta.text, delta.confidence, [utteranceEvent.id, deltaEvent.id]);
+      this.upsertAlignmentNode(
+        roomId,
+        actorId,
+        delta.nodeType,
+        delta.text,
+        delta.confidence,
+        [utteranceEvent.id, deltaEvent.id],
+      );
     }
 
     return this.maybePublishOrchestratorUpdate(roomId, actorId, false);
   }
 
-  submitAgentDelta(roomId: string, ownerId: string, sourceAgent: string, text: string, type = "agent_insight") {
+  submitAgentDelta(
+    roomId: string,
+    ownerId: string,
+    sourceAgent: string,
+    text: string,
+    type = "agent_insight",
+    confidence = 0.76,
+  ): PendingAgentDelta {
     const actor = this.requireParticipantInRoom(roomId, ownerId);
     this.assertCanParticipate(actor, "Observers cannot attach private agents.");
-    const delta = {
+    const trimmedText = typeof text === "string" ? text.trim() : "";
+    if (!trimmedText) {
+      throw new Error("Agent delta text is required.");
+    }
+    const delta: PendingAgentDelta = {
       id: crypto.randomUUID(),
       roomId,
       ownerId,
-      sourceAgent,
-      type,
-      text,
-      confidence: 0.76,
+      sourceAgent:
+        typeof sourceAgent === "string" && sourceAgent.trim()
+          ? sourceAgent.trim()
+          : "codex-room-bridge",
+      type:
+        typeof type === "string" && type.trim() ? type.trim() : "agent_insight",
+      text: trimmedText,
+      confidence: Number.isFinite(confidence)
+        ? Math.min(Math.max(confidence, 0), 1)
+        : 0.76,
       status: "pending" as const,
       createdAt: nowIso(),
     };
-    db.prepare("INSERT INTO agent_deltas (id, room_id, owner_id, json) VALUES (?, ?, ?, ?)").run(
-      delta.id,
+    db.prepare(
+      "INSERT INTO agent_deltas (id, room_id, owner_id, json) VALUES (?, ?, ?, ?)",
+    ).run(delta.id, roomId, ownerId, JSON.stringify(delta));
+    this.recordEvent(
       roomId,
       ownerId,
-      JSON.stringify(delta),
+      "agent.delta.submitted",
+      `Pending delta from ${sourceAgent}`,
+      {
+        deltaId: delta.id,
+        text: delta.text,
+        approvalState: "pending",
+      },
     );
-    this.recordEvent(roomId, ownerId, "agent.delta.submitted", `Pending delta from ${sourceAgent}`, {
-      deltaId: delta.id,
-      text,
-      approvalState: "pending",
-    });
     return delta;
   }
 
@@ -255,17 +385,40 @@ export class AppStore {
       throw new Error("Agent delta does not belong to this room.");
     }
     if (delta.ownerId !== actorId) {
-      throw new Error("Only the owning participant can promote a private delta.");
+      throw new Error(
+        "Only the owning participant can promote a private delta.",
+      );
     }
     delta.status = "promoted";
-    db.prepare("UPDATE agent_deltas SET json = ? WHERE id = ?").run(JSON.stringify(delta), delta.id);
-    const promotedEvent = this.recordEvent(roomId, actorId, "agent.delta.promoted", delta.text, {
-      deltaId,
-      approvedBy: actorId,
-      approvalState: "promoted",
-    });
-    this.upsertAlignmentNode(roomId, actorId, "option", delta.text, delta.confidence, [promotedEvent.id]);
-    return this.maybePublishOrchestratorUpdate(roomId, actorId, false);
+    db.prepare("UPDATE agent_deltas SET json = ? WHERE id = ?").run(
+      JSON.stringify(delta),
+      delta.id,
+    );
+    const promotedEvent = this.recordEvent(
+      roomId,
+      actorId,
+      "agent.delta.promoted",
+      delta.text,
+      {
+        deltaId,
+        approvedBy: actorId,
+        approvalState: "promoted",
+      },
+    );
+    this.upsertAlignmentNode(
+      roomId,
+      actorId,
+      "option",
+      delta.text,
+      delta.confidence,
+      [promotedEvent.id],
+    );
+    const orchestratorUpdate = await this.maybePublishOrchestratorUpdate(
+      roomId,
+      actorId,
+      false,
+    );
+    return { delta, orchestratorUpdate };
   }
 
   discardAgentDelta(roomId: string, actorId: string, deltaId: string) {
@@ -275,11 +428,22 @@ export class AppStore {
       throw new Error("Agent delta does not belong to this room.");
     }
     if (delta.ownerId !== actorId) {
-      throw new Error("Only the owning participant can discard a private delta.");
+      throw new Error(
+        "Only the owning participant can discard a private delta.",
+      );
     }
     delta.status = "discarded";
-    db.prepare("UPDATE agent_deltas SET json = ? WHERE id = ?").run(JSON.stringify(delta), delta.id);
-    this.recordEvent(roomId, actorId, "agent.delta.discarded", `Discarded private delta`, { deltaId, discardedBy: actorId });
+    db.prepare("UPDATE agent_deltas SET json = ? WHERE id = ?").run(
+      JSON.stringify(delta),
+      delta.id,
+    );
+    this.recordEvent(
+      roomId,
+      actorId,
+      "agent.delta.discarded",
+      `Discarded private delta`,
+      { deltaId, discardedBy: actorId },
+    );
     return delta;
   }
 
@@ -308,12 +472,21 @@ export class AppStore {
       node.type = "agreement";
       node.text = trimmedNote || node.text;
       node.lastTouchedAt = nowIso();
-      db.prepare("UPDATE alignment_nodes SET json = ? WHERE id = ?").run(JSON.stringify(node), node.id);
-      this.recordEvent(roomId, actorId, "alignment.node.updated", `Resolved blocker as agreement`, {
-        op: "resolve",
-        nodeId: node.id,
-        resolution,
-      });
+      db.prepare("UPDATE alignment_nodes SET json = ? WHERE id = ?").run(
+        JSON.stringify(node),
+        node.id,
+      );
+      this.recordEvent(
+        roomId,
+        actorId,
+        "alignment.node.updated",
+        `Resolved blocker as agreement`,
+        {
+          op: "resolve",
+          nodeId: node.id,
+          resolution,
+        },
+      );
       return node;
     }
 
@@ -322,24 +495,41 @@ export class AppStore {
     if (resolution === "dissent") {
       const dissentText = trimmedNote || node.text;
       this.appendDissentToAdr(roomId, actor, dissentText);
-      this.recordEvent(roomId, actorId, "adr.dissent_recorded", `Recorded dissent for blocker`, {
-        dissenterId: actorId,
-        sourceNodeId: node.id,
-        text: dissentText,
-      });
+      this.recordEvent(
+        roomId,
+        actorId,
+        "adr.dissent_recorded",
+        `Recorded dissent for blocker`,
+        {
+          dissenterId: actorId,
+          sourceNodeId: node.id,
+          text: dissentText,
+        },
+      );
       return null;
     }
 
-    this.recordEvent(roomId, actorId, "alignment.node.updated", `Marked blocker non-blocking`, {
-      op: "resolve",
-      nodeId: node.id,
-      resolution,
-      note: trimmedNote || null,
-    });
+    this.recordEvent(
+      roomId,
+      actorId,
+      "alignment.node.updated",
+      `Marked blocker non-blocking`,
+      {
+        op: "resolve",
+        nodeId: node.id,
+        resolution,
+        note: trimmedNote || null,
+      },
+    );
     return null;
   }
 
-  claimScope(roomId: string, actorId: string, scopeType: OwnershipClaim["scopeType"], scopeId: string) {
+  claimScope(
+    roomId: string,
+    actorId: string,
+    scopeType: OwnershipClaim["scopeType"],
+    scopeId: string,
+  ) {
     const actor = this.requireParticipantInRoom(roomId, actorId);
     this.assertCanParticipate(actor, "Observers cannot claim sections.");
     this.assertClaimableScope(roomId, scopeType, scopeId);
@@ -349,7 +539,9 @@ export class AppStore {
       this.recordEvent(
         roomId,
         actorId,
-        scopeType === "adr_section" ? "adr.section.overlap_warning" : "plan_item.overlap_warning",
+        scopeType === "adr_section"
+          ? "adr.section.overlap_warning"
+          : "plan_item.overlap_warning",
         `${scopeType} ${scopeId} is already claimed`,
         { scopeId, attemptedBy: actorId, currentOwnerId: existing.ownerId },
       );
@@ -365,14 +557,13 @@ export class AppStore {
       expiresAt: new Date(Date.now() + claimTtlMs).toISOString(),
     };
     if (existing) {
-      db.prepare("UPDATE claims SET updated_at = ?, expires_at = ?, owner_id = ? WHERE id = ?").run(
-        claim.updatedAt,
-        claim.expiresAt,
-        claim.ownerId,
-        claim.id,
-      );
+      db.prepare(
+        "UPDATE claims SET updated_at = ?, expires_at = ?, owner_id = ? WHERE id = ?",
+      ).run(claim.updatedAt, claim.expiresAt, claim.ownerId, claim.id);
     } else {
-      db.prepare("INSERT INTO claims (id, room_id, scope_type, scope_id, owner_id, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+      db.prepare(
+        "INSERT INTO claims (id, room_id, scope_type, scope_id, owner_id, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      ).run(
         claim.id,
         roomId,
         scopeType,
@@ -384,7 +575,9 @@ export class AppStore {
       this.recordEvent(
         roomId,
         actorId,
-        scopeType === "adr_section" ? "adr.section.claimed" : "plan_item.claimed",
+        scopeType === "adr_section"
+          ? "adr.section.claimed"
+          : "plan_item.claimed",
         `${scopeType} ${scopeId} claimed`,
         { scopeId, claimId: claim.id, ttlMs: claimTtlMs },
       );
@@ -392,7 +585,13 @@ export class AppStore {
     return claim;
   }
 
-  releaseScope(roomId: string, actorId: string, scopeType: OwnershipClaim["scopeType"], scopeId: string, reason = "manual") {
+  releaseScope(
+    roomId: string,
+    actorId: string,
+    scopeType: OwnershipClaim["scopeType"],
+    scopeId: string,
+    reason = "manual",
+  ) {
     if (reason === "manual") {
       this.requireParticipantInRoom(roomId, actorId);
     }
@@ -407,19 +606,30 @@ export class AppStore {
     this.recordEvent(
       roomId,
       actorId,
-      scopeType === "adr_section" ? "adr.section.released" : "plan_item.released",
+      scopeType === "adr_section"
+        ? "adr.section.released"
+        : "plan_item.released",
       `${scopeType} ${scopeId} released`,
       { scopeId, reason },
     );
   }
 
-  async regenerateAdrSection(roomId: string, actorId: string, section: AdrSectionKey) {
+  async regenerateAdrSection(
+    roomId: string,
+    actorId: string,
+    section: AdrSectionKey,
+  ) {
     const snapshot = this.getRoomSnapshot(roomId, actorId);
     const text = await this.adapter.draftAdrSection(snapshot, section);
     return this.updateAdrSection(roomId, actorId, section, text);
   }
 
-  updateAdrSection(roomId: string, actorId: string, section: AdrSectionKey, text: string) {
+  updateAdrSection(
+    roomId: string,
+    actorId: string,
+    section: AdrSectionKey,
+    text: string,
+  ) {
     const actor = this.requireParticipantInRoom(roomId, actorId);
     this.assertCanParticipate(actor, "Observers cannot edit ADR sections.");
     this.assertClaim(roomId, actorId, "adr_section", section);
@@ -431,14 +641,20 @@ export class AppStore {
     adr.reviews[section] = [];
     adr.approvals = [];
     adr.status = "draft";
-    db.prepare("UPDATE adrs SET sections_json = ?, reviews_json = ? WHERE room_id = ?").run(
-      JSON.stringify(adr.sections),
-      JSON.stringify(adr.reviews),
-      roomId,
-    );
-    db.prepare("UPDATE adrs SET status = ?, approvals_json = ? WHERE room_id = ?").run(adr.status, JSON.stringify(adr.approvals), roomId);
+    db.prepare(
+      "UPDATE adrs SET sections_json = ?, reviews_json = ? WHERE room_id = ?",
+    ).run(JSON.stringify(adr.sections), JSON.stringify(adr.reviews), roomId);
+    db.prepare(
+      "UPDATE adrs SET status = ?, approvals_json = ? WHERE room_id = ?",
+    ).run(adr.status, JSON.stringify(adr.approvals), roomId);
     this.touchClaim(roomId, "adr_section", section);
-    this.recordEvent(roomId, actorId, "adr.section.updated", `${section} updated`, { section });
+    this.recordEvent(
+      roomId,
+      actorId,
+      "adr.section.updated",
+      `${section} updated`,
+      { section },
+    );
     return adr;
   }
 
@@ -456,8 +672,16 @@ export class AppStore {
     reviewers.add(actorId);
     adr.reviews[section] = [...reviewers];
     adr.status = "in_review";
-    db.prepare("UPDATE adrs SET status = ?, reviews_json = ? WHERE room_id = ?").run(adr.status, JSON.stringify(adr.reviews), roomId);
-    this.recordEvent(roomId, actorId, "adr.section.reviewed", `${section} reviewed`, { section, reviewerId: actorId });
+    db.prepare(
+      "UPDATE adrs SET status = ?, reviews_json = ? WHERE room_id = ?",
+    ).run(adr.status, JSON.stringify(adr.reviews), roomId);
+    this.recordEvent(
+      roomId,
+      actorId,
+      "adr.section.reviewed",
+      `${section} reviewed`,
+      { section, reviewerId: actorId },
+    );
     return adr;
   }
 
@@ -468,7 +692,11 @@ export class AppStore {
     const adr = this.requireAdr(roomId);
     const snapshot = this.getRoomSnapshot(roomId, actorId);
 
-    if (!snapshot.readiness.adrSectionsPopulated || !snapshot.readiness.adrReviewed || !snapshot.readiness.unresolvedDifferencesCleared) {
+    if (
+      !snapshot.readiness.adrSectionsPopulated ||
+      !snapshot.readiness.adrReviewed ||
+      !snapshot.readiness.unresolvedDifferencesCleared
+    ) {
       throw new Error("The ADR is not ready for approval.");
     }
 
@@ -488,7 +716,9 @@ export class AppStore {
         createdBy: actorId,
         createdAt: nowIso(),
       };
-      db.prepare("INSERT INTO adr_revisions (id, room_id, json) VALUES (?, ?, ?)").run(revision.id, roomId, JSON.stringify(revision));
+      db.prepare(
+        "INSERT INTO adr_revisions (id, room_id, json) VALUES (?, ?, ?)",
+      ).run(revision.id, roomId, JSON.stringify(revision));
       this.recordEvent(roomId, actorId, "adr.approved", `ADR approved`, {
         approverIds: [...approvals],
         decisionOwnerIds: room.decisionOwnerIds,
@@ -496,7 +726,9 @@ export class AppStore {
       });
     }
 
-    db.prepare("UPDATE adrs SET status = ?, approvals_json = ? WHERE room_id = ?").run(adr.status, JSON.stringify(adr.approvals), roomId);
+    db.prepare(
+      "UPDATE adrs SET status = ?, approvals_json = ? WHERE room_id = ?",
+    ).run(adr.status, JSON.stringify(adr.approvals), roomId);
     return adr;
   }
 
@@ -522,11 +754,22 @@ export class AppStore {
       JSON.stringify([]),
       this.latestRevisionId("adr_revisions", roomId),
     );
-    this.recordEvent(roomId, actorId, "plan.generated", `Implementation plan generated`, { planId });
+    this.recordEvent(
+      roomId,
+      actorId,
+      "plan.generated",
+      `Implementation plan generated`,
+      { planId },
+    );
     return this.requirePlan(roomId);
   }
 
-  updatePlanItem(roomId: string, actorId: string, itemId: string, patch: Partial<Workstream>) {
+  updatePlanItem(
+    roomId: string,
+    actorId: string,
+    itemId: string,
+    patch: Partial<Workstream>,
+  ) {
     const actor = this.requireParticipantInRoom(roomId, actorId);
     this.assertCanParticipate(actor, "Observers cannot edit plan workstreams.");
     this.assertClaim(roomId, actorId, "plan_item", itemId);
@@ -553,20 +796,27 @@ export class AppStore {
     plan.workstreams = nextItems;
     plan.approvals = [];
     plan.status = "draft";
-    db.prepare("UPDATE plans SET status = ?, workstreams_json = ?, approvals_json = ? WHERE room_id = ?").run(
+    db.prepare(
+      "UPDATE plans SET status = ?, workstreams_json = ?, approvals_json = ? WHERE room_id = ?",
+    ).run(
       plan.status,
       JSON.stringify(nextItems),
       JSON.stringify(plan.approvals),
       roomId,
     );
     this.touchClaim(roomId, "plan_item", itemId);
-    this.recordEvent(roomId, actorId, "plan.updated", `Plan item updated`, { itemId });
+    this.recordEvent(roomId, actorId, "plan.updated", `Plan item updated`, {
+      itemId,
+    });
     return plan;
   }
 
   acceptPlanOwner(roomId: string, actorId: string, itemId: string) {
     const actor = this.requireParticipantInRoom(roomId, actorId);
-    this.assertCanParticipate(actor, "Observers cannot accept workstream ownership.");
+    this.assertCanParticipate(
+      actor,
+      "Observers cannot accept workstream ownership.",
+    );
     const plan = this.requirePlan(roomId);
     if (plan.status === "approved") {
       throw new Error("Approved plans cannot be changed.");
@@ -588,13 +838,21 @@ export class AppStore {
     plan.workstreams = nextItems;
     plan.approvals = [];
     plan.status = "in_review";
-    db.prepare("UPDATE plans SET status = ?, workstreams_json = ?, approvals_json = ? WHERE room_id = ?").run(
+    db.prepare(
+      "UPDATE plans SET status = ?, workstreams_json = ?, approvals_json = ? WHERE room_id = ?",
+    ).run(
       plan.status,
       JSON.stringify(nextItems),
       JSON.stringify(plan.approvals),
       roomId,
     );
-    this.recordEvent(roomId, actorId, "plan_item.owner_accepted", `Accepted ownership for ${itemId}`, { itemId, ownerId: actorId });
+    this.recordEvent(
+      roomId,
+      actorId,
+      "plan_item.owner_accepted",
+      `Accepted ownership for ${itemId}`,
+      { itemId, ownerId: actorId },
+    );
     return plan;
   }
 
@@ -605,7 +863,9 @@ export class AppStore {
     const plan = this.requirePlan(roomId);
     const snapshot = this.getRoomSnapshot(roomId, actorId);
     if (!snapshot.readiness.acceptedWorkstreamOwners) {
-      throw new Error("Every workstream needs an accepted owner before plan approval.");
+      throw new Error(
+        "Every workstream needs an accepted owner before plan approval.",
+      );
     }
     const approvals = new Set(plan.approvals);
     approvals.add(actorId);
@@ -624,23 +884,32 @@ export class AppStore {
         createdAt: nowIso(),
         sourceAdrRevisionId: this.latestRevisionId("adr_revisions", roomId),
       };
-      db.prepare("INSERT INTO plan_revisions (id, room_id, json) VALUES (?, ?, ?)").run(revision.id, roomId, JSON.stringify(revision));
+      db.prepare(
+        "INSERT INTO plan_revisions (id, room_id, json) VALUES (?, ?, ?)",
+      ).run(revision.id, roomId, JSON.stringify(revision));
       this.recordEvent(roomId, actorId, "plan.approved", `Plan approved`, {
         approverIds: [...approvals],
         planRevisionId: revision.id,
         sourceAdrRevisionId: revision.sourceAdrRevisionId,
       });
     }
-    db.prepare("UPDATE plans SET status = ?, approvals_json = ? WHERE room_id = ?").run(plan.status, JSON.stringify(plan.approvals), roomId);
+    db.prepare(
+      "UPDATE plans SET status = ?, approvals_json = ? WHERE room_id = ?",
+    ).run(plan.status, JSON.stringify(plan.approvals), roomId);
     return plan;
   }
 
   generateHandoff(roomId: string, actorId: string) {
     const actor = this.requireParticipantInRoom(roomId, actorId);
-    this.assertCanParticipate(actor, "Observers can only view existing handoff packages.");
+    this.assertCanParticipate(
+      actor,
+      "Observers can only view existing handoff packages.",
+    );
     const payload = this.ensureHandoffPackage(roomId, actorId);
     if (!payload) {
-      throw new Error("Approve the ADR and plan before generating a handoff package.");
+      throw new Error(
+        "Approve the ADR and plan before generating a handoff package.",
+      );
     }
     return payload;
   }
@@ -649,33 +918,57 @@ export class AppStore {
     this.releaseExpiredClaims();
     const room = this.requireRoom(roomId);
     const participantRows = db
-      .query("SELECT json FROM participants WHERE room_id = ? ORDER BY json_extract(json, '$.joinedAt') ASC")
+      .query(
+        "SELECT json FROM participants WHERE room_id = ? ORDER BY json_extract(json, '$.joinedAt') ASC",
+      )
       .all(roomId) as Array<{ json: string }>;
-    const participants = participantRows.map((row) => parseJson<Participant>(row.json));
+    const participants = participantRows.map((row) =>
+      parseJson<Participant>(row.json),
+    );
     const guardrails = this.getGuardrails();
     const components = this.getComponents();
-    const patterns = matchPatterns(this.getPatterns(), room.topicTags, `${room.topic} ${room.goal}`);
+    const patterns = matchPatterns(
+      this.getPatterns(),
+      room.topicTags,
+      `${room.topic} ${room.goal}`,
+    );
     const alignmentRows = db
-      .query("SELECT json FROM alignment_nodes WHERE room_id = ? ORDER BY json_extract(json, '$.lastTouchedAt') DESC")
+      .query(
+        "SELECT json FROM alignment_nodes WHERE room_id = ? ORDER BY json_extract(json, '$.lastTouchedAt') DESC",
+      )
       .all(roomId) as Array<{ json: string }>;
-    const alignmentNodes = alignmentRows.map((row) => parseJson<AlignmentNode>(row.json));
+    const alignmentNodes = alignmentRows.map((row) =>
+      parseJson<AlignmentNode>(row.json),
+    );
     const updateRows = db
-      .query("SELECT json FROM orchestrator_updates WHERE room_id = ? ORDER BY json_extract(json, '$.createdAt') DESC LIMIT 8")
+      .query(
+        "SELECT json FROM orchestrator_updates WHERE room_id = ? ORDER BY json_extract(json, '$.createdAt') DESC LIMIT 8",
+      )
       .all(roomId) as Array<{ json: string }>;
-    const orchestratorUpdates = updateRows.map((row) => parseJson<RoomSnapshot["orchestratorUpdates"][number]>(row.json));
+    const orchestratorUpdates = updateRows.map((row) =>
+      parseJson<RoomSnapshot["orchestratorUpdates"][number]>(row.json),
+    );
     const pendingDeltas = viewerId
       ? (
           db
-            .query("SELECT json FROM agent_deltas WHERE room_id = ? AND owner_id = ? ORDER BY json_extract(json, '$.createdAt') DESC")
+            .query(
+              "SELECT json FROM agent_deltas WHERE room_id = ? AND owner_id = ? ORDER BY json_extract(json, '$.createdAt') DESC",
+            )
             .all(roomId, viewerId) as Array<{ json: string }>
-        ).map((row) => parseJson<RoomSnapshot["pendingDeltas"][number]>(row.json))
+        ).map((row) =>
+          parseJson<RoomSnapshot["pendingDeltas"][number]>(row.json),
+        )
       : [];
     const routedToParticipant = viewerId
       ? (
           db
-            .query("SELECT json FROM routing_items WHERE room_id = ? AND participant_id = ? ORDER BY json_extract(json, '$.createdAt') DESC")
+            .query(
+              "SELECT json FROM routing_items WHERE room_id = ? AND participant_id = ? ORDER BY json_extract(json, '$.createdAt') DESC",
+            )
             .all(roomId, viewerId) as Array<{ json: string }>
-        ).map((row) => parseJson<RoomSnapshot["routedToParticipant"][number]>(row.json))
+        ).map((row) =>
+          parseJson<RoomSnapshot["routedToParticipant"][number]>(row.json),
+        )
       : [];
     const claims = db
       .query("SELECT * FROM claims WHERE room_id = ? ORDER BY updated_at DESC")
@@ -701,17 +994,40 @@ export class AppStore {
       approvals: [],
     };
     const recentEvents = db
-      .query("SELECT id, type, actor_id, timestamp, summary FROM events WHERE room_id = ? ORDER BY timestamp DESC LIMIT 20")
+      .query(
+        "SELECT id, type, actor_id, timestamp, summary FROM events WHERE room_id = ? ORDER BY timestamp DESC LIMIT 20",
+      )
       .all(roomId)
       .map((row) => {
-        const value = row as { id: string; type: string; actor_id: string; timestamp: string; summary: string };
-        return { id: value.id, type: value.type, actorId: value.actor_id, timestamp: value.timestamp, summary: value.summary };
+        const value = row as {
+          id: string;
+          type: string;
+          actor_id: string;
+          timestamp: string;
+          summary: string;
+        };
+        return {
+          id: value.id,
+          type: value.type,
+          actorId: value.actor_id,
+          timestamp: value.timestamp,
+          summary: value.summary,
+        };
       });
-    const unresolvedDifferencesCleared = !alignmentNodes.some((node) => node.type === "unresolved_difference");
-    const adrSectionsPopulated = adrSectionOrder.every((section) => adr.sections[section].trim().length > 0);
-    const adrReviewed = adrSectionOrder.every((section) => adr.reviews[section].length > 0);
+    const unresolvedDifferencesCleared = !alignmentNodes.some(
+      (node) => node.type === "unresolved_difference",
+    );
+    const adrSectionsPopulated = adrSectionOrder.every(
+      (section) => adr.sections[section].trim().length > 0,
+    );
+    const adrReviewed = adrSectionOrder.every(
+      (section) => adr.reviews[section].length > 0,
+    );
     const acceptedWorkstreamOwners = plan.workstreams.every(
-      (item) => item.ownerStatus === "accepted" && item.deliverables.length > 0 && item.acceptanceChecks.length > 0,
+      (item) =>
+        item.ownerStatus === "accepted" &&
+        item.deliverables.length > 0 &&
+        item.acceptanceChecks.length > 0,
     );
 
     return {
@@ -746,18 +1062,24 @@ export class AppStore {
   }
 
   getHandoff(roomId: string) {
-    const row = db.query("SELECT json FROM handoff_packages WHERE room_id = ?").get(roomId) as { json?: string } | null;
+    const row = db
+      .query("SELECT json FROM handoff_packages WHERE room_id = ?")
+      .get(roomId) as { json?: string } | null;
     return row?.json ? parseJson(row.json) : null;
   }
 
   releaseExpiredClaims() {
-    const expired = db.query("SELECT * FROM claims WHERE expires_at < ?").all(nowIso()) as Array<Record<string, string>>;
+    const expired = db
+      .query("SELECT * FROM claims WHERE expires_at < ?")
+      .all(nowIso()) as Array<Record<string, string>>;
     for (const claim of expired) {
       db.prepare("DELETE FROM claims WHERE id = ?").run(claim.id);
       this.recordEvent(
         claim.room_id,
         claim.owner_id,
-        claim.scope_type === "adr_section" ? "adr.section.released" : "plan_item.released",
+        claim.scope_type === "adr_section"
+          ? "adr.section.released"
+          : "plan_item.released",
         `${claim.scope_type} ${claim.scope_id} auto-released`,
         { scopeId: claim.scope_id, reason: "timeout" },
       );
@@ -782,19 +1104,29 @@ export class AppStore {
       patterns: snapshot.patterns,
       alignmentNodes: snapshot.alignmentNodes,
     };
-    db.prepare("INSERT INTO handoff_packages (id, room_id, json) VALUES (?, ?, ?) ON CONFLICT(room_id) DO UPDATE SET json = excluded.json").run(
-      payload.id,
+    db.prepare(
+      "INSERT INTO handoff_packages (id, room_id, json) VALUES (?, ?, ?) ON CONFLICT(room_id) DO UPDATE SET json = excluded.json",
+    ).run(payload.id, roomId, JSON.stringify(payload));
+    this.recordEvent(
       roomId,
-      JSON.stringify(payload),
+      actorId,
+      "implementation.package.generated",
+      `Generated handoff package`,
+      { packageId: payload.id },
     );
-    this.recordEvent(roomId, actorId, "implementation.package.generated", `Generated handoff package`, { packageId: payload.id });
     return payload;
   }
 
-  private async maybePublishOrchestratorUpdate(roomId: string, actorId: string, force: boolean) {
-    const latest = db.query("SELECT json FROM orchestrator_updates WHERE room_id = ? ORDER BY json_extract(json, '$.createdAt') DESC LIMIT 1").get(roomId) as
-      | { json?: string }
-      | null;
+  private async maybePublishOrchestratorUpdate(
+    roomId: string,
+    actorId: string,
+    force: boolean,
+  ) {
+    const latest = db
+      .query(
+        "SELECT json FROM orchestrator_updates WHERE room_id = ? ORDER BY json_extract(json, '$.createdAt') DESC LIMIT 1",
+      )
+      .get(roomId) as { json?: string } | null;
     if (!force && latest?.json) {
       const lastUpdate = parseJson<{ createdAt: string }>(latest.json);
       if (Date.now() - Date.parse(lastUpdate.createdAt) < 10_000) {
@@ -802,7 +1134,9 @@ export class AppStore {
       }
     }
     const snapshot = this.getRoomSnapshot(roomId, actorId);
-    const recentSummaries = snapshot.recentEvents.slice(0, 5).map((event) => event.summary);
+    const recentSummaries = snapshot.recentEvents
+      .slice(0, 5)
+      .map((event) => event.summary);
     const result = await this.adapter.synthesize(snapshot, recentSummaries);
     const update = {
       id: crypto.randomUUID(),
@@ -811,10 +1145,14 @@ export class AppStore {
       suggestedNextMove: result.suggestedNextMove,
       targetedFeedback: result.targetedFeedback,
       routedInsights: result.routedInsights,
-      sourceEventIds: snapshot.recentEvents.slice(0, 5).map((event) => event.id),
+      sourceEventIds: snapshot.recentEvents
+        .slice(0, 5)
+        .map((event) => event.id),
       createdAt: nowIso(),
     };
-    db.prepare("INSERT INTO orchestrator_updates (id, room_id, json) VALUES (?, ?, ?)").run(update.id, roomId, JSON.stringify(update));
+    db.prepare(
+      "INSERT INTO orchestrator_updates (id, room_id, json) VALUES (?, ?, ?)",
+    ).run(update.id, roomId, JSON.stringify(update));
     for (const item of result.targetedFeedback) {
       const routingItem = {
         id: crypto.randomUUID(),
@@ -822,14 +1160,23 @@ export class AppStore {
         message: item.message,
         createdAt: nowIso(),
       };
-      db.prepare("INSERT INTO routing_items (id, room_id, participant_id, json) VALUES (?, ?, ?, ?)").run(
+      db.prepare(
+        "INSERT INTO routing_items (id, room_id, participant_id, json) VALUES (?, ?, ?, ?)",
+      ).run(
         routingItem.id,
         roomId,
         item.participantId,
         JSON.stringify(routingItem),
       );
     }
-    this.recordEvent(roomId, actorId, "orchestrator.update.published", result.synthesis, { updateId: update.id }, update.sourceEventIds);
+    this.recordEvent(
+      roomId,
+      actorId,
+      "orchestrator.update.published",
+      result.synthesis,
+      { updateId: update.id },
+      update.sourceEventIds,
+    );
     return update;
   }
 
@@ -841,17 +1188,34 @@ export class AppStore {
     confidence: number,
     sourceEventIds: string[],
   ) {
-    const existingRows = db.query("SELECT id, json FROM alignment_nodes WHERE room_id = ?").all(roomId) as Array<{ id: string; json: string }>;
+    const existingRows = db
+      .query("SELECT id, json FROM alignment_nodes WHERE room_id = ?")
+      .all(roomId) as Array<{ id: string; json: string }>;
     const existing = existingRows
       .map((row) => parseJson<AlignmentNode>(row.json))
-      .find((node) => node.type === type && normalize(node.text) === normalize(text));
+      .find(
+        (node) =>
+          node.type === type && normalize(node.text) === normalize(text),
+      );
 
     if (existing) {
       existing.lastTouchedAt = nowIso();
       existing.confidence = Math.max(existing.confidence, confidence);
-      existing.sourceEventIds = [...new Set([...existing.sourceEventIds, ...sourceEventIds])];
-      db.prepare("UPDATE alignment_nodes SET json = ? WHERE id = ?").run(JSON.stringify(existing), existing.id);
-      this.recordEvent(roomId, actorId, "alignment.node.updated", `${type} refreshed`, { op: "update", nodeId: existing.id }, sourceEventIds);
+      existing.sourceEventIds = [
+        ...new Set([...existing.sourceEventIds, ...sourceEventIds]),
+      ];
+      db.prepare("UPDATE alignment_nodes SET json = ? WHERE id = ?").run(
+        JSON.stringify(existing),
+        existing.id,
+      );
+      this.recordEvent(
+        roomId,
+        actorId,
+        "alignment.node.updated",
+        `${type} refreshed`,
+        { op: "update", nodeId: existing.id },
+        sourceEventIds,
+      );
       return existing;
     }
 
@@ -866,13 +1230,24 @@ export class AppStore {
       sourceEventIds,
       supersedesId: null,
     };
-    db.prepare("INSERT INTO alignment_nodes (id, room_id, json) VALUES (?, ?, ?)").run(node.id, roomId, JSON.stringify(node));
-    this.recordEvent(roomId, actorId, "alignment.node.updated", `${type} added`, { op: "add", nodeId: node.id }, sourceEventIds);
+    db.prepare(
+      "INSERT INTO alignment_nodes (id, room_id, json) VALUES (?, ?, ?)",
+    ).run(node.id, roomId, JSON.stringify(node));
+    this.recordEvent(
+      roomId,
+      actorId,
+      "alignment.node.updated",
+      `${type} added`,
+      { op: "add", nodeId: node.id },
+      sourceEventIds,
+    );
     return node;
   }
 
   private requireRoom(roomId: string) {
-    const row = db.query("SELECT json FROM rooms WHERE id = ?").get(roomId) as { json?: string } | null;
+    const row = db.query("SELECT json FROM rooms WHERE id = ?").get(roomId) as {
+      json?: string;
+    } | null;
     if (!row?.json) {
       throw new Error("Room not found.");
     }
@@ -880,9 +1255,15 @@ export class AppStore {
   }
 
   private requireAdr(roomId: string) {
-    const row = db.query("SELECT * FROM adrs WHERE room_id = ?").get(roomId) as
-      | { id: string; status: string; sections_json: string; reviews_json: string; approvals_json: string }
-      | null;
+    const row = db
+      .query("SELECT * FROM adrs WHERE room_id = ?")
+      .get(roomId) as {
+      id: string;
+      status: string;
+      sections_json: string;
+      reviews_json: string;
+      approvals_json: string;
+    } | null;
     if (!row) {
       throw new Error("ADR not found.");
     }
@@ -896,15 +1277,15 @@ export class AppStore {
   }
 
   private findPlan(roomId: string) {
-    const row = db.query("SELECT * FROM plans WHERE room_id = ?").get(roomId) as
-      | {
-          id: string;
-          status: string;
-          sections_json: string;
-          workstreams_json: string;
-          approvals_json: string;
-        }
-      | null;
+    const row = db
+      .query("SELECT * FROM plans WHERE room_id = ?")
+      .get(roomId) as {
+      id: string;
+      status: string;
+      sections_json: string;
+      workstreams_json: string;
+      approvals_json: string;
+    } | null;
     if (!row) {
       return null;
     }
@@ -926,7 +1307,9 @@ export class AppStore {
   }
 
   private requireAgentDelta(deltaId: string) {
-    const row = db.query("SELECT json FROM agent_deltas WHERE id = ?").get(deltaId) as { json?: string } | null;
+    const row = db
+      .query("SELECT json FROM agent_deltas WHERE id = ?")
+      .get(deltaId) as { json?: string } | null;
     if (!row?.json) {
       throw new Error("Agent delta not found.");
     }
@@ -934,7 +1317,9 @@ export class AppStore {
   }
 
   private requireAlignmentNode(roomId: string, nodeId: string) {
-    const row = db.query("SELECT json FROM alignment_nodes WHERE id = ? AND room_id = ?").get(nodeId, roomId) as { json?: string } | null;
+    const row = db
+      .query("SELECT json FROM alignment_nodes WHERE id = ? AND room_id = ?")
+      .get(nodeId, roomId) as { json?: string } | null;
     if (!row?.json) {
       throw new Error("Alignment node not found.");
     }
@@ -976,9 +1361,15 @@ export class AppStore {
     return event;
   }
 
-  private findClaim(roomId: string, scopeType: OwnershipClaim["scopeType"], scopeId: string) {
+  private findClaim(
+    roomId: string,
+    scopeType: OwnershipClaim["scopeType"],
+    scopeId: string,
+  ) {
     const row = db
-      .query("SELECT * FROM claims WHERE room_id = ? AND scope_type = ? AND scope_id = ? LIMIT 1")
+      .query(
+        "SELECT * FROM claims WHERE room_id = ? AND scope_type = ? AND scope_id = ? LIMIT 1",
+      )
       .get(roomId, scopeType, scopeId) as Record<string, string> | null;
     if (!row) {
       return null;
@@ -994,32 +1385,51 @@ export class AppStore {
     } satisfies OwnershipClaim;
   }
 
-  private touchClaim(roomId: string, scopeType: OwnershipClaim["scopeType"], scopeId: string) {
+  private touchClaim(
+    roomId: string,
+    scopeType: OwnershipClaim["scopeType"],
+    scopeId: string,
+  ) {
     const claim = this.findClaim(roomId, scopeType, scopeId);
     if (!claim) {
       return;
     }
-    db.prepare("UPDATE claims SET updated_at = ?, expires_at = ? WHERE id = ?").run(nowIso(), new Date(Date.now() + claimTtlMs).toISOString(), claim.id);
+    db.prepare(
+      "UPDATE claims SET updated_at = ?, expires_at = ? WHERE id = ?",
+    ).run(nowIso(), new Date(Date.now() + claimTtlMs).toISOString(), claim.id);
   }
 
-  private assertClaim(roomId: string, actorId: string, scopeType: OwnershipClaim["scopeType"], scopeId: string) {
+  private assertClaim(
+    roomId: string,
+    actorId: string,
+    scopeType: OwnershipClaim["scopeType"],
+    scopeId: string,
+  ) {
     const claim = this.findClaim(roomId, scopeType, scopeId);
     if (!claim || claim.ownerId !== actorId) {
       throw new Error("Claim this section before editing.");
     }
   }
 
-  private appendDissentToAdr(roomId: string, actor: Participant, dissentText: string) {
+  private appendDissentToAdr(
+    roomId: string,
+    actor: Participant,
+    dissentText: string,
+  ) {
     const adr = this.requireAdr(roomId);
     if (adr.status === "approved") {
       return;
     }
     const entry = `Dissent (${actor.displayName}): ${dissentText}`;
-    adr.sections.consequences = adr.sections.consequences.trim() ? `${adr.sections.consequences}\n\n${entry}` : entry;
+    adr.sections.consequences = adr.sections.consequences.trim()
+      ? `${adr.sections.consequences}\n\n${entry}`
+      : entry;
     adr.reviews.consequences = [];
     adr.approvals = [];
     adr.status = "draft";
-    db.prepare("UPDATE adrs SET status = ?, sections_json = ?, reviews_json = ?, approvals_json = ? WHERE room_id = ?").run(
+    db.prepare(
+      "UPDATE adrs SET status = ?, sections_json = ?, reviews_json = ?, approvals_json = ? WHERE room_id = ?",
+    ).run(
       adr.status,
       JSON.stringify(adr.sections),
       JSON.stringify(adr.reviews),
@@ -1029,7 +1439,9 @@ export class AppStore {
   }
 
   private requireParticipantInRoom(roomId: string, participantId: string) {
-    const row = db.query("SELECT json FROM participants WHERE id = ? AND room_id = ?").get(participantId, roomId) as { json?: string } | null;
+    const row = db
+      .query("SELECT json FROM participants WHERE id = ? AND room_id = ?")
+      .get(participantId, roomId) as { json?: string } | null;
     if (!row?.json) {
       throw new Error("Participant not found in this room.");
     }
@@ -1048,7 +1460,11 @@ export class AppStore {
     }
   }
 
-  private assertClaimableScope(roomId: string, scopeType: OwnershipClaim["scopeType"], scopeId: string) {
+  private assertClaimableScope(
+    roomId: string,
+    scopeType: OwnershipClaim["scopeType"],
+    scopeId: string,
+  ) {
     if (scopeType === "adr_section") {
       if (!isAdrSectionKey(scopeId)) {
         throw new Error("Unknown ADR section.");
@@ -1062,14 +1478,24 @@ export class AppStore {
     }
   }
 
-  private countRows(tableName: "adr_revisions" | "plan_revisions", roomId: string) {
-    const row = db.query(`SELECT COUNT(*) AS count FROM ${tableName} WHERE room_id = ?`).get(roomId) as { count: number };
+  private countRows(
+    tableName: "adr_revisions" | "plan_revisions",
+    roomId: string,
+  ) {
+    const row = db
+      .query(`SELECT COUNT(*) AS count FROM ${tableName} WHERE room_id = ?`)
+      .get(roomId) as { count: number };
     return row.count;
   }
 
-  private latestRevisionId(tableName: "adr_revisions" | "plan_revisions", roomId: string) {
+  private latestRevisionId(
+    tableName: "adr_revisions" | "plan_revisions",
+    roomId: string,
+  ) {
     const row = db
-      .query(`SELECT json FROM ${tableName} WHERE room_id = ? ORDER BY json_extract(json, '$.createdAt') DESC LIMIT 1`)
+      .query(
+        `SELECT json FROM ${tableName} WHERE room_id = ? ORDER BY json_extract(json, '$.createdAt') DESC LIMIT 1`,
+      )
       .get(roomId) as { json?: string } | null;
     if (!row?.json) {
       return null;

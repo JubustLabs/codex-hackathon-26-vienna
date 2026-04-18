@@ -500,6 +500,106 @@ a.list-card:hover, .list-card:hover {
   background: var(--success); box-shadow: 0 0 8px rgba(42, 122, 80, 0.5);
 }
 
+/* next-move + you-are */
+.next-move {
+  display: flex; gap: 0.9rem; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; margin-top: 0.7rem; padding: 0.85rem 1rem;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(184, 74, 45, 0.06), rgba(255, 253, 247, 0.6));
+}
+.next-move-copy { display: grid; gap: 0.1rem; min-width: 0; }
+.next-move-copy strong {
+  font-family: var(--serif); font-size: 1.05rem; color: var(--ink); letter-spacing: -0.01em;
+}
+.next-move-copy > span:last-child { color: var(--muted); font-size: 0.86rem; }
+.you-are {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.35rem; border-radius: var(--radius-pill);
+  background: rgba(255, 253, 247, 0.8); border: 1px solid var(--line);
+  font-size: 0.85rem; color: var(--text-soft);
+}
+.you-are[data-role="decision_owner"] {
+  border-color: rgba(184, 74, 45, 0.35); background: rgba(184, 74, 45, 0.08);
+}
+.you-are strong { font-weight: 600; color: var(--ink); }
+
+/* quorum pips */
+.quorum {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.65rem; border-radius: var(--radius-pill);
+  background: rgba(255, 253, 247, 0.7); border: 1px solid var(--line);
+  font-size: 0.78rem; color: var(--muted);
+}
+.quorum-pip {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: transparent; border: 1.5px solid var(--line-strong);
+}
+.quorum-pip.filled {
+  background: var(--success); border-color: var(--success);
+  box-shadow: 0 0 6px rgba(42, 122, 80, 0.45);
+}
+.quorum-count { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* timeline extras */
+.timeline-head {
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: center;
+}
+.timeline-time {
+  font-size: 0.7rem; color: var(--muted-2); font-variant-numeric: tabular-nums;
+  font-weight: 500; letter-spacing: 0;
+}
+.timeline-actor {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem;
+}
+.timeline-actor .avatar { width: 18px; height: 18px; font-size: 0.6rem; }
+.timeline-actor.system {
+  font-style: italic; letter-spacing: 0.04em;
+}
+.orchestrator-card .card-meta { width: 100%; }
+.orchestrator-card .card-meta .timeline-time {
+  margin-left: auto; color: var(--muted); letter-spacing: 0;
+  text-transform: none; font-weight: 500;
+}
+
+/* timeline event-kind dots */
+.timeline-row[data-kind="message"]::before { background: var(--col-goal); }
+.timeline-row[data-kind="classifier"]::before { background: var(--col-option); }
+.timeline-row[data-kind="alignment"]::before { background: var(--col-tradeoff); }
+.timeline-row[data-kind="orchestrator"]::before { background: var(--accent); }
+.timeline-row[data-kind="agent"]::before { background: var(--col-open_question); }
+.timeline-row[data-kind="adr"]::before { background: var(--col-constraint); }
+.timeline-row[data-kind="plan"]::before { background: var(--col-agreement); }
+.timeline-row[data-kind="approval"]::before {
+  background: var(--success); box-shadow: 0 0 0 2px var(--panel), 0 0 6px rgba(42, 122, 80, 0.45);
+}
+.timeline-row[data-kind="warn"]::before { background: var(--danger); }
+.timeline-row[data-kind="presence"]::before { background: var(--col-unresolved_difference); }
+.timeline-row[data-kind="room"]::before { background: var(--muted); }
+
+/* mine editor-card + routed accents */
+.editor-card.mine {
+  border-color: rgba(184, 74, 45, 0.4);
+  box-shadow: 0 18px 50px rgba(64, 42, 13, 0.09), inset 3px 0 0 0 var(--accent);
+}
+.editor-card.mine::after {
+  content: "yours"; display: inline-block;
+  font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent-deep); font-weight: 700;
+  position: absolute; top: 0.6rem; right: 0.8rem;
+}
+.editor-card { position: relative; }
+
+.routed-panel {
+  border-color: rgba(184, 74, 45, 0.35);
+  box-shadow: 0 18px 50px rgba(64, 42, 13, 0.12), 0 0 0 1px rgba(184, 74, 45, 0.08);
+}
+.routed-card {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(135deg, rgba(184, 74, 45, 0.08), rgba(255, 253, 247, 0.9));
+}
+
 /* responsive */
 @media (max-width: 1200px) {
   .room-shell { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); }

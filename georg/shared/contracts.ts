@@ -100,6 +100,81 @@ export interface PendingAgentDelta {
   createdAt: string;
 }
 
+export interface SocketPingMessage {
+  type: "ping";
+}
+
+export interface SocketPongMessage {
+  type: "pong";
+}
+
+export interface SocketErrorMessage {
+  type: "socket.error";
+  error: string;
+  requestId?: string;
+}
+
+export interface RoomSocketReadyMessage {
+  type: "room.socket.ready";
+  roomId: string;
+  participantId?: string;
+}
+
+export interface RoomInvalidateMessage {
+  type: "room.invalidate";
+  roomId: string;
+  reason?: string;
+}
+
+export type RoomSocketClientMessage = SocketPingMessage;
+export type RoomSocketServerMessage =
+  | RoomSocketReadyMessage
+  | RoomInvalidateMessage
+  | SocketPongMessage;
+
+export interface AgentSocketReadyMessage {
+  type: "agent.socket.ready";
+  roomId: string;
+  participantId: string;
+  sourceAgent: string;
+}
+
+export interface AgentDeltaSubmitMessage {
+  type: "agent.delta.submit";
+  requestId?: string;
+  sourceAgent?: string;
+  deltaType?: string;
+  text: string;
+  confidence?: number;
+}
+
+export interface AgentDeltaAcceptedMessage {
+  type: "agent.delta.accepted";
+  requestId?: string;
+  roomId: string;
+  participantId: string;
+  delta: PendingAgentDelta;
+}
+
+export interface AgentDeltaStatusMessage {
+  type: "agent.delta.status";
+  roomId: string;
+  participantId: string;
+  status: PendingAgentDelta["status"];
+  delta: PendingAgentDelta;
+}
+
+export type AgentSocketClientMessage =
+  | SocketPingMessage
+  | AgentDeltaSubmitMessage;
+export type AgentSocketServerMessage =
+  | AgentSocketReadyMessage
+  | AgentDeltaAcceptedMessage
+  | AgentDeltaStatusMessage
+  | RoomInvalidateMessage
+  | SocketErrorMessage
+  | SocketPongMessage;
+
 export interface Guardrail {
   id: string;
   key: string;
@@ -176,7 +251,12 @@ export interface RoomSnapshot {
   alignmentNodes: AlignmentNode[];
   orchestratorUpdates: OrchestratorUpdate[];
   pendingDeltas: PendingAgentDelta[];
-  routedToParticipant: Array<{ id: string; participantId: string; message: string; createdAt: string }>;
+  routedToParticipant: Array<{
+    id: string;
+    participantId: string;
+    message: string;
+    createdAt: string;
+  }>;
   adr: {
     id: string;
     status: "draft" | "in_review" | "approved";

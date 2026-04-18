@@ -3,32 +3,127 @@ set shell := ["bash", "-cu"]
 default:
   @just --list
 
+# --- app ------------------------------------------------------------------
+
+ensure-app:
+  [ -d node_modules ] || bun install
+
+ensure-slides:
+  [ -d slides/node_modules ] || (cd slides && bun install)
+
+ensure-video:
+  [ -d video/node_modules ] || (cd video && bun install)
+
+ensure-slide-video: ensure-video
+  mkdir -p slides/public
+  [ -f video/out/realtime-alignment.mp4 ] || (cd video && bun run build)
+  cp video/out/realtime-alignment.mp4 slides/public/hackathon-video.mp4
+
+setup:
+  bun install
+  cd slides && bun install
+  cd video && bun install
+
 install:
   bun install
 
-dev:
+clean:
+  rm -f db/workspace.sqlite db/workspace.sqlite-shm db/workspace.sqlite-wal
+
+dev: ensure-app
   bun run dev
 
-build:
+build: ensure-app
   bun run build
 
-start:
+start: ensure-app
   bun run start
 
-lint:
+lint: ensure-app
   bun run lint
 
-fmt:
+fmt: ensure-app
   bun run format
 
-typecheck:
+typecheck: ensure-app
   bun run typecheck
 
-check:
+check: ensure-app
   bun run check
+
+bridge-watch room_id participant_id source_agent="codex-room-bridge" server="http://localhost:3001":
+  cd .. && bun plugins/codex-room-bridge/scripts/bridge.ts watch --room-id "{{room_id}}" --participant-id "{{participant_id}}" --source-agent "{{source_agent}}" --server "{{server}}"
+
+bridge-submit room_id participant_id source_agent text server="http://localhost:3001":
+  cd .. && bun plugins/codex-room-bridge/scripts/bridge.ts submit --room-id "{{room_id}}" --participant-id "{{participant_id}}" --source-agent "{{source_agent}}" --server "{{server}}" --text "{{text}}"
 
 precommit-install:
   pre-commit install -c georg/.pre-commit-config.yaml --install-hooks
 
 precommit-run:
   pre-commit run --all-files -c georg/.pre-commit-config.yaml
+
+# --- video (Remotion) -----------------------------------------------------
+
+# Install video deps (Remotion + fonts).
+video-install:
+  cd video && bun install
+
+# Open the Remotion Studio to tweak scenes live.
+video-dev: ensure-video
+  cd video && bun run dev
+
+# Render the mp4 to video/out/realtime-alignment.mp4.
+video-render: ensure-video
+  cd video && bun run build
+
+# Render a thumbnail still (mid-reveal) to video/out/thumbnail.png.
+video-still: ensure-video
+  cd video && bun run still
+
+# --- slides (Slidev) ------------------------------------------------------
+
+# Install slide-deck deps.
+slides-install:
+  cd slides && bun install
+
+# Serve the deck at http://localhost:3030.
+slides-dev: ensure-slides ensure-slide-video
+  cd slides && bun run dev
+
+# Build the deck as a static site (slides/dist/).
+slides-build: ensure-slides ensure-slide-video
+  cd slides && bun run build
+
+# Export the deck to slides-export.pdf.
+slides-export: ensure-slides ensure-slide-video
+  cd slides && bun run export
+
+# --- integrated demo pipeline --------------------------------------------
+
+# Fresh interactive demo: clean DB, create a room, spawn the app and two local agent bridges in tmux.
+demo session="realtime-alignment-demo":
+  bash scripts/demo-live.sh "{{session}}"
+
+demo-stop session="realtime-alignment-demo":
+  tmux kill-session -t "{{session}}"
+
+# Render the video, drop it into the deck's public folder, then start the deck.
+# Great for the pitch flow.
+demo-pitch: ensure-video ensure-slides
+  cd video && bun run build
+  mkdir -p slides/public
+  cp video/out/realtime-alignment.mp4 slides/public/hackathon-video.mp4
+  cd slides && bun run dev
+
+# Same as `demo-pitch` but without re-rendering (uses the last mp4).
+demo-pitch-quick: ensure-slides ensure-slide-video
+  cd slides && bun run dev
+
+# Render everything fresh: app check + video + slide deck build.
+ship: ensure-app ensure-video ensure-slides
+  bun run check
+  cd video && bun run build
+  mkdir -p slides/public
+  cp video/out/realtime-alignment.mp4 slides/public/hackathon-video.mp4
+  cd slides && bun run build

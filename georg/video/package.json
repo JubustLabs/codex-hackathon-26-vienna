@@ -1,0 +1,25 @@
+{
+  "name": "realtime-alignment-video",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Remotion composition for the Realtime Alignment Workspace hackathon demo video.",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "build": "remotion render src/index.ts RealtimeAlignment out/realtime-alignment.mp4",
+    "still": "remotion still src/index.ts RealtimeAlignment out/thumbnail.png --frame=360",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.200",
+    "@remotion/google-fonts": "^4.0.200",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "remotion": "^4.0.200"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "typescript": "^5.9.2"
+  }
+}

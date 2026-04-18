@@ -1,7 +1,7 @@
 {
-  "name": "[TODO: marketplace-name]",
+  "name": "jubust-local-plugins",
   "interface": {
-    "displayName": "[TODO: Marketplace Display Name]"
+    "displayName": "Jubust Local Plugins"
   },
   "plugins": [
     {
