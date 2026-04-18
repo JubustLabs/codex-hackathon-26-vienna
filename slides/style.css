@@ -58,6 +58,21 @@
   color: var(--ra-ink);
 }
 
+/* Inline code (single backticks). Without this rule the default shiki/prose
+ * style paints a dark pill over our parchment palette, making the text
+ * unreadable. Fenced ```blocks``` keep their shiki theme; this rule only
+ * targets inline `code` nodes that are not inside a pre. */
+.slidev-layout :not(pre) > code {
+  background: rgba(184, 74, 45, 0.10);
+  border: 1px solid rgba(184, 74, 45, 0.20);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  color: var(--ra-accent-deep);
+  white-space: nowrap;
+}
+
 .slidev-layout blockquote {
   border-left: 3px solid var(--ra-accent);
   background: rgba(184, 74, 45, 0.06);

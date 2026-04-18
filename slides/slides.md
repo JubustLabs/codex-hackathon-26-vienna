@@ -196,7 +196,7 @@ layout: center
 />
 
 <p class="text-center opacity-70 text-xs mt-3" style="margin-bottom: 0;">
-  44 seconds · a room converges on a decision, generates a plan, ships a handoff
+  a space converges on a decision, generates a plan, ships a handoff
 </p>
 
 <!--
