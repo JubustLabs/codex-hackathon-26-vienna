@@ -9,6 +9,10 @@ export const Private = () => {
   const slideX = clamp(frame, [115, 160], [0, -520]);
   const cardOpacity = frame > 158 ? 0 : 1;
   const nodeIn = clamp(frame, [150, 172], [0, 1]);
+  // Merge the fade-up enter with the slide-out exit so opacity/transform
+  // are each specified once (avoids TS2783).
+  const cardEnter = clamp(frame, [20, 40], [0, 1]);
+  const cardLift = (1 - cardEnter) * 18;
 
   return (
     <AbsoluteFill
@@ -116,9 +120,8 @@ export const Private = () => {
             padding: "22px 24px",
             border: `1px solid rgba(184,74,45,${0.35})`,
             boxShadow: `0 30px 70px rgba(64,42,13,${0.16}), 0 0 0 1px rgba(184,74,45,${0.06})`,
-            opacity: cardOpacity,
-            transform: `translateX(${slideX}px)`,
-            ...fadeUp(frame, 20, 20),
+            opacity: cardOpacity * cardEnter,
+            transform: `translate(${slideX}px, ${cardLift}px)`,
           }}
         >
           <div
