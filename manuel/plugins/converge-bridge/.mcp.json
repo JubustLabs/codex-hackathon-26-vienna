@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "converge-bridge": {
+      "command": "bun",
+      "args": ["./scripts/mcp-server.ts"],
+      "cwd": "."
+    }
+  }
+}

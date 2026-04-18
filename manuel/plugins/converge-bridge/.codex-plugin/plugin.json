@@ -1,0 +1,41 @@
+{
+  "name": "converge-bridge",
+  "version": "0.0.1",
+  "description": "Local bridge for publishing workspace-backed deltas into the Converge prototype.",
+  "author": {
+    "name": "Manuel",
+    "email": "manuel@example.com",
+    "url": "https://github.com/JubustLabs/codex-hackathon-26-vienna"
+  },
+  "homepage": "http://localhost:3001/health",
+  "repository": "https://github.com/JubustLabs/codex-hackathon-26-vienna",
+  "license": "MIT",
+  "keywords": [
+    "local-first",
+    "collaboration",
+    "prototype",
+    "decision-room"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Converge Bridge",
+    "shortDescription": "Connect local workspace context to the Converge room.",
+    "longDescription": "A thin local bridge for the hackathon prototype that identifies a participant, surfaces minimal workspace context, and publishes approved deltas into the shared Converge room.",
+    "developerName": "Jubust Labs",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/JubustLabs/codex-hackathon-26-vienna",
+    "privacyPolicyURL": "https://github.com/JubustLabs/codex-hackathon-26-vienna",
+    "termsOfServiceURL": "https://github.com/JubustLabs/codex-hackathon-26-vienna",
+    "defaultPrompt": [
+      "Connect Maya to the Converge room.",
+      "Publish my approved support-side constraint to the room.",
+      "Fetch the latest routed conflict packet for this lane."
+    ],
+    "brandColor": "#4FA8A4"
+  }
+}

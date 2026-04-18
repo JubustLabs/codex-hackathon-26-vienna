@@ -50,7 +50,7 @@ The first draft must validate, with at least one recorded 3-person session per c
 6. The implementation plan has an **accepted owner on every workstream** and every open implementation question has a named resolver and next checkpoint before handoff.
 7. When relevant existing components or hard workspace guardrails exist, the final ADR+plan either references them explicitly or records a human-readable justification for not using them.
 8. Section-level ownership prevents silent overlap across at least one scripted concurrent-edit scenario (§25).
-9. **Baseline head-to-head:** in a **45-minute** session on the same topic, same pre-read, and same participant count, the workspace beats "Google Doc + Claude copy-paste + facilitated meeting" on both: (a) blind review of the exported ADR+plan using the rubric in §25 (problem framing, decision clarity, tradeoff explicitness, implementation specificity, owner clarity) by 2 of 3 reviewers, and (b) the post-session participant alignment check.
+9. **Baseline head-to-head:** in a **45-minute** session on the same topic, same pre-read, and same participant count, the workspace beats "Google Doc + ChatGPT copy-paste + facilitated meeting" on both: (a) blind review of the exported ADR+plan using the rubric in §25 (problem framing, decision clarity, tradeoff explicitness, implementation specificity, owner clarity) by 2 of 3 reviewers, and (b) the post-session participant alignment check.
 
 The combined baseline comparison is the load-bearing one. Without it, the other metrics are self-referential.
 
@@ -109,6 +109,481 @@ The room should not only produce the latest ADR. It should preserve immutable AD
 ### 5.13 Structured conflicts may be machine-detected; prose conflicts may not
 For free-form ADR and plan text, the product should prevent overlap with ownership locks. For typed subdecisions, the product may detect field-level conflicts and auto-merge only when the changes are semantically disjoint.
 
+## 5A. Locked MVP Contract
+
+This section is the quick-iteration contract for the first real build. If another section of the document is more ambitious, this section wins.
+
+### 5A.1 Visual Product Goal
+
+The first build must be **beautiful on camera** and pleasant to look at in motion. The product is not just a systems demo; it is a visual demo of collaborative thinking becoming clearer over time.
+
+The UI should feel:
+
+- calm
+- premium
+- legible in under 3 seconds
+- visually alive without becoming noisy
+- clearly separated between `private thinking` and `shared convergence`
+
+### 5A.2 Demo-First UI Shape
+
+The default demo layout is a three-lane composition:
+
+- left lane: participant A private lane
+- center lane: shared orchestrator room
+- right lane: participant B private lane
+
+The center lane is the hero. It should make these states obvious at a glance:
+
+- current shared synthesis
+- open blockers
+- routed insights
+- convergence vs disagreement
+
+### 5A.3 Chosen Tech Stack
+
+For the MVP, the stack is locked to:
+
+- frontend: `React 19`, `React Router`, `Vite`
+- backend: `Bun`
+- realtime transport: native `WebSocket`
+- persistence: `SQLite`
+- model API: `OpenAI Responses API`
+- classifier: `gpt-5.4-nano` first, `gpt-5-mini` fallback
+- orchestrator: `gpt-5.4`
+- ADR drafting: `gpt-5.4`
+- plan generation: `gpt-5.4`
+
+`gpt-5.4-mini` is an optimization candidate later, not the default for the first quality pass.
+
+### 5A.4 Local-First MVP Assumptions
+
+The first iteration should run locally.
+
+- one local Bun server
+- one local shared room
+- two participant clients
+- two local Codex plugin clients
+- no auth
+- no email invites
+- no workspace accounts
+- no multi-tenant assumptions
+
+Participant identity should resolve in this order:
+
+1. Codex plugin provided display name
+2. local OS username
+3. manual name input box
+
+### 5A.5 Must Ship / Nice To Have / Out Of Scope
+
+Must ship:
+
+- one prefilled demo session
+- one shared local room
+- two human participants
+- one private agent/plugin lane per participant
+- one shared orchestrator stream
+- typed delta promotion
+- alignment board
+- beautiful center-lane synthesis view
+- ADR draft generation
+- implementation plan draft generation
+
+Nice to have:
+
+- routed insight animations
+- component catalog
+- guardrail panel
+- conflict badges
+- revision history polish
+
+Out of scope for the first visual MVP:
+
+- multiple agents per participant
+- voice/video
+- CRDT editing
+- autonomous code execution
+- rich pattern memory
+- enterprise auth / governance
+
+### 5A.6 Codex Plugin Role
+
+The **Codex app plugin** is the default local-agent implementation.
+
+Its job is to:
+
+- gather local workspace context
+- help the local user reason privately
+- prepare structured deltas and evidence
+- publish approved items into the shared orchestrator room
+- receive routed feedback back from the room
+
+The shared orchestrator should not directly crawl participant machines in the MVP.
+
+### 5A.7 Private Agent Promotion Rules
+
+Private agent suggestions stay private by default.
+
+- only the human may promote an item into the shared room
+- each promoted item must be exactly one typed delta at a time
+- one typed delta means one structured claim, not a paragraph of mixed reasoning
+- no raw private transcript enters the shared room
+
+Allowed delta types for MVP:
+
+- `goal`
+- `constraint`
+- `option`
+- `risk`
+- `tradeoff`
+- `open_question`
+- `evidence`
+- `reuse_candidate`
+
+Example:
+
+- not allowed as one delta: "Reuse billing, but migrate events later, and maybe auth breaks in edge cases"
+- allowed as separate deltas:
+  - `option`: "Reuse the existing billing service"
+  - `risk`: "Auth may break during billing migration"
+  - `open_question`: "Do we need a new event model for billing?"
+
+### 5A.8 Orchestrator Feedback Rules
+
+The orchestrator may only do four kinds of visible intervention in the MVP:
+
+- summarize common ground
+- surface blockers or contradictions
+- route relevant insight from one participant to another
+- flag weak proposals when they violate a guardrail, conflict with a domain constraint, or duplicate an already stated idea
+
+It should not do open-ended personality critique or vague taste-based judgment.
+
+Every visible challenge should be grounded in one of:
+
+- explicit guardrails
+- previously stated constraints
+- unresolved differences
+- known workspace evidence
+- domain requirements already present in the room
+
+### 5A.9 Prefilled Demo Session
+
+The first demo should not begin from an empty room. It should open into a seeded session so viewers immediately understand what the product is doing.
+
+The default demo session should be prefilled with:
+
+- `Topic`: "How should we build our customer service agent?"
+- `Decision to make`: "Choose the first architecture for a local-first customer service agent that can answer common questions, escalate correctly, and fit our current stack"
+- `Why now`: "We need a concrete architecture direction before implementation starts on the customer service agent"
+- `Success bar`: "Leave the room with one chosen direction, key tradeoffs, and an implementation plan"
+- `Participants`:
+  - `Maya` — Support Lead
+  - `Alex` — Engineering Lead
+- `Seed constraints`:
+  - local-first for MVP
+  - Codex plugin as the local agent bridge
+  - visually impressive and clear in video
+  - OpenAI stack
+  - must escalate to a human when uncertain
+  - must feel trustworthy to support operators
+- `Seed options`:
+  - retrieval-first support agent over existing docs
+  - workflow-driven agent with explicit escalation states
+- `Seed blocker`: "Should the customer service agent answer directly by default, or escalate earlier for trust and control?"
+
+This prefilled session should be the default boot experience for the first video build.
+
+### 5A.10 Locked Demo Context
+
+Each side lane should begin with exactly three visible evidence fragments so viewers understand why each participant starts from a different position.
+
+`Maya` — Support Lead lane:
+
+- `Support note`: "Customers lose trust when the agent sounds confident but is wrong."
+- `Policy fragment`: "Escalate billing, refunds, and account access issues early."
+- `Ticket pattern`: "Top complaints: delivery status, returns, account lockouts."
+
+`Alex` — Engineering Lead lane:
+
+- `Stack note`: "We already have docs search and auth services we can reuse."
+- `Implementation note`: "A workflow-driven escalation layer is easier to ship safely than a fully autonomous agent."
+- `Constraint`: "MVP should be local-first, simple, and fit the current stack."
+
+### 5A.11 Locked Conflict And Resolution
+
+The central conflict for the demo is:
+
+`Should the customer service agent answer directly by default, or escalate earlier for trust and control?`
+
+The room should converge on this final decision:
+
+`Build a retrieval-first customer service agent with strict early escalation rules for high-risk topics and low-confidence answers.`
+
+Supporting decision points:
+
+- answer common low-risk questions directly
+- escalate billing, refunds, account access, and uncertain cases early
+- keep escalation logic explicit and reviewable
+- reuse existing docs, search, and auth pieces where possible
+
+### 5A.12 Locked Implementation Plan Reveal
+
+The final plan reveal should show exactly four implementation steps:
+
+1. `Define safe answer vs escalation categories`
+2. `Connect retrieval over existing support docs and help content`
+3. `Add explicit escalation rules and confidence thresholds`
+4. `Ship a first operator-visible handoff flow`
+
+### 5A.13 Locked UX Copy And Framing
+
+The room header should always show:
+
+- `Topic`
+- `Decision to make`
+- `Why now`
+- `Participants`
+- `Current blocker`
+
+The first still frame of the demo should show:
+
+- the room header
+- Maya and Alex already present
+- both plugin lanes connected
+- one evidence fragment highlighted in each side lane
+- center lane sections for:
+  - `What we're deciding`
+  - `What still conflicts`
+
+Conflict packets sent back to local plugins should use concise copy like:
+
+For Maya:
+
+- `Conflict: Alex wants broader direct answering for speed.`
+- `Your concern: earlier escalation protects trust and policy compliance.`
+- `Prompt: What topics must always escalate?`
+
+For Alex:
+
+- `Conflict: Maya wants earlier escalation for trust and control.`
+- `Your concern: too much escalation makes the agent less useful.`
+- `Prompt: What questions are safe to answer directly?`
+
+The final center-lane reveal should keep the path visible as subtle breadcrumbs:
+
+- `Maya: protect trust`
+- `Alex: reuse existing systems`
+- `Conflict: autonomy vs escalation`
+- `Decision: retrieval-first + early escalation`
+
+### 5A.14 Locked Visual System
+
+For the first implementation pass, the visual system is locked to:
+
+- `Theme`: dark
+- `Background`: deep charcoal with a slight cool tint
+- `Surface`: layered soft graphite panels
+- `Convergence accent`: muted mineral teal
+- `Conflict accent`: subdued ember/copper
+- `Motion`: soft fade/slide transitions, no bounce, no flashy glow
+- `Layout`: center lane dominant, side lanes quieter and narrower
+
+Typography should pair:
+
+- one refined display face for room title and major synthesis
+- one clean, quiet body sans for detail and controls
+
+### 5A.15 Do Not Reopen During MVP Build
+
+These should stay fixed during the first implementation pass:
+
+- topic
+- participants
+- central conflict
+- final decision
+- 4-step implementation plan
+- 3-lane layout
+
+## 5B. Hackathon Implementation Contract
+
+This section is the final implementation contract for the hackathon prototype. If architecture details elsewhere are more ambitious, this section wins for the first build.
+
+### 5B.1 Prototype Thesis
+
+Build one **local-first Converge room** for one fixed use case:
+
+- two expert lanes
+- one shared orchestrator lane
+- one visible conflict
+- one believable convergence loop
+- one final decision and short implementation plan
+
+This prototype is not trying to prove a general collaboration platform. It is trying to prove one magical loop clearly and beautifully.
+
+### 5B.2 What The “Plugin” Means In MVP
+
+For the hackathon, the “Codex plugin” should be treated as a **thin local Codex bridge**, not a fully packaged marketplace-style platform extension.
+
+Its role is:
+
+- identify the local participant
+- expose minimal local workspace context
+- publish approved deltas to the room
+- receive room updates and conflict packets back
+
+The goal is to make the local-agent-to-shared-room loop real without spending the hackathon on plugin infrastructure.
+
+### 5B.3 Locked Plugin Shape
+
+The minimal plugin bridge should expose only:
+
+- `get_identity`
+- `workspace_summary`
+- `publish_delta`
+- `fetch_room_updates`
+
+Optional only if time remains:
+
+- `search_code`
+- `read_selected_files`
+
+Everything else is deferred.
+
+### 5B.4 Locked Handshake
+
+Use this exact interaction contract for the first implementation:
+
+1. `plugin.connect`
+   - payload: `participant_id`, `display_name`, `lane`
+2. `plugin.subscribe`
+   - payload: `room_id`
+3. `plugin.publish_delta`
+   - payload: `room_id`, `delta`
+4. `room.conflict_packet`
+   - payload: targeted conflict packet for a participant
+5. `plugin.ack`
+   - payload: `packet_id`
+6. `room.state_update`
+   - payload: synthesis, conflict state, convergence state, decision state
+
+This should be implemented over the simplest reliable local transport available to the room app and plugin bridge.
+
+### 5B.5 Locked Data Contracts
+
+Keep the promoted delta schema tiny:
+
+```json
+{
+  "type": "option",
+  "text": "Reuse the existing support workflow engine",
+  "source": "alex-plugin",
+  "confidence": 0.82
+}
+```
+
+Fields:
+
+- `type`
+- `text`
+- `source`
+- `confidence`
+
+Keep the conflict packet small:
+
+```json
+{
+  "conflict_id": "conf_12",
+  "topic": "agent autonomy",
+  "your_claim": "Agent should resolve common requests automatically",
+  "other_claim": "Agent should escalate sooner for trust and compliance",
+  "why_conflict_detected": "The two claims imply different handoff thresholds",
+  "suggested_next_step": "Clarify the maximum safe autonomy level"
+}
+```
+
+### 5B.6 Locked Local Topology
+
+Assume this for the first demo build:
+
+- one local Bun server
+- one local room app
+- two browser lanes visible in the app
+- two local plugin bridge instances
+- one machine is enough to simulate the full loop
+
+If a two-machine LAN demo becomes possible later, it is a bonus, not a requirement for MVP.
+
+### 5B.7 Locked First Vertical Slice
+
+The first real end-to-end slice should be exactly this:
+
+1. render the prefilled room
+2. show both participants connected
+3. show side-lane evidence
+4. publish one promoted delta from each side
+5. trigger one conflict packet to both lanes
+6. publish one refined response from each side
+7. show orchestrator convergence
+8. reveal final decision
+9. reveal 4-step implementation plan
+
+Do not build broader product capability before this slice works.
+
+### 5B.8 Real Vs Seeded In MVP
+
+These should be **real** in the first prototype:
+
+- room header and 3-lane layout
+- local plugin connection state
+- delta promotion
+- conflict packet return flow
+- orchestrator beat updates
+- final decision reveal
+- 4-step plan reveal
+
+These may be **seeded / simplified / stubbed**:
+
+- deep repo reasoning
+- advanced component discovery
+- pattern-memory richness
+- robust persistence beyond what is needed for the demo
+- flexible multi-user product behavior
+- production-grade auth, governance, and networking
+
+### 5B.9 One Truth Surface Rule
+
+For MVP, the center lane is the primary truth surface.
+
+- side lanes support it
+- supporting panels should be minimized or hidden
+- do not make the viewer choose between multiple primary surfaces
+
+If there is any doubt, prefer one beautiful center-lane experience over more visible system structure.
+
+### 5B.10 Coding Order
+
+Build in this order:
+
+1. app shell + visual system + 3-lane layout
+2. room header + prefilled scenario
+3. side-lane evidence fragments
+4. center-lane conflict state
+5. local server state flow
+6. thin local plugin bridge
+7. delta publish flow
+8. conflict packet return flow
+9. convergence state
+10. final decision + 4-step plan reveal
+
+Only after that:
+
+- richer plugin reads
+- better persistence
+- component catalog depth
+- pattern memory depth
+
 ## 6. Primary Users
 
 - **Decision owners.** 1-3 humans named when the room is created. They are accountable for the final decision and form the formal approval set for the ADR and plan.
@@ -120,18 +595,18 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 ## 7. End-to-End User Journey
 
 ### 7.1 Before the session
-1. A user creates a room with a **decision brief**: topic, topic tags, decision to make, goal, non-goals, scope, success bar, and initial decision owners. The room inherits workspace guardrails by default; the creator may add room-specific overrides with audit.
-2. Participants are invited by link or email token.
+1. A user starts a local room with a **decision brief**: topic, topic tags, decision to make, goal, non-goals, scope, success bar, and initial decision owners.
+2. Participants join the room locally by display name or plugin-provided identity.
 3. The pattern library pre-fetches matches by topic tags.
 4. The component catalog refreshes from workspace evidence sources and surfaces likely reusable components for the topic.
 5. Participants can review the active guardrails before discussion starts.
-6. Participants may attach agents.
+6. Participants connect their local Codex plugin agents.
 
 ### 7.2 During the session
 1. Humans type ideas, constraints, tradeoffs.
-2. The classifier (Haiku) tags each utterance with candidate alignment-node deltas.
+2. The classifier (`gpt-5.4-nano` or `gpt-5-mini`) tags each utterance with candidate alignment-node deltas.
 3. Participant agents and the classifier turn local reasoning into typed deltas.
-4. The orchestrator (Sonnet) runs every 10s over the last window + current alignment snapshot, emitting a single `orchestrator_update`.
+4. The orchestrator (`gpt-5.4` or `gpt-5.4-mini`) runs every 10s over the last window + current alignment snapshot, emitting a single `orchestrator_update`.
 5. The alignment board updates with: goals, constraints, options, tradeoffs, risks, open questions, agreements, unresolved differences.
 6. The orchestrator highlights where one person's proposal is relevant to another person's blocker or domain concern.
 7. Pattern panel surfaces matches with a short "why this" justification.
@@ -166,7 +641,7 @@ For free-form ADR and plan text, the product should prevent overlap with ownersh
 
 ## 9. POC Scope
 
-**In:** text-first collaboration, one workspace, one live room type, one shared orchestrator stream, per-human perspective panes, attached personal agents contributing typed deltas, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, ADR revision history, typed subdecision tracking, implementation plan generation + approval, live ownership, audit log.
+**In:** text-first collaboration, one local workspace, one live room type, one shared orchestrator stream, per-human perspective panes, local Codex plugin agents contributing typed deltas, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, ADR revision history, typed subdecision tracking, implementation plan generation + approval, live ownership, audit log.
 
 **Out:** voice, video, multiple room archetypes, multi-workspace federation, external IdPs, analytics dashboards, autonomous execution, unrestricted public agent chatter, and deep whole-codebase semantic discovery beyond evidence-backed POC heuristics.
 
@@ -184,9 +659,9 @@ React Client(s)
         -> Revision Service (ADR / subdecision / plan snapshots)
         -> Guardrail Service (workspace defaults + room overrides)
         -> Component Catalog Service (manifest/repo scan + confirmation state)
-        -> Classifier Worker (per-utterance, Haiku)
+        -> Classifier Worker (per-utterance, GPT-5 mini/nano)
         -> Agent Gateway (per-human private agent sessions)
-        -> Orchestrator Worker (windowed, Sonnet)
+        -> Orchestrator Worker (windowed, GPT-5.4)
         -> ADR Compiler (on-demand)
         -> Plan Generator (on-demand)
         -> Pattern Service (tag-match over seeded JSON)
@@ -199,9 +674,9 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 - **Frontend:** React 19 + React Router (already in repo) + Vite
 - **Backend:** Bun server exposing HTTP + WebSocket from the same process
 - **Persistence:** **SQLite** (not Postgres — zero-ops for the demo; migrate later if needed)
-- **LLM:** Anthropic SDK and OpenAI Responses API. Primary Anthropic path: Claude Sonnet 4.6 for synthesis/drafting, Claude Haiku 4.5 for per-delta classification. OpenAI parity path: `gpt-5.4` / `gpt-5.4-mini` for synthesis and drafting, `gpt-5.4-nano` or `gpt-5-mini` for per-delta classification
-- **Auth:** magic-link + room token. No SSO.
-- **Deployment:** single host (Fly.io or equivalent). One `.env`. One process.
+- **LLM:** OpenAI Responses API only. Use `gpt-5.4` for orchestration and drafting, and `gpt-5.4-nano` or `gpt-5-mini` for per-delta classification
+- **Identity:** plugin-provided name, OS username, or manual name entry. No auth in MVP.
+- **Deployment:** local-first. One local process. Remote hosting is deferred.
 
 ### 10.3 Concurrency and conflict model
 
@@ -222,7 +697,7 @@ Everything runs in one Bun process. Workers are in-process async tasks, not sepa
 Room lifecycle, presence, message fanout, claim bookkeeping, permission checks, audit events.
 
 ### 11.2 Classifier worker
-Runs per utterance. Small Haiku prompt: given utterance + last alignment snapshot, emit zero or more typed deltas (see §13.1) with confidence and a `novelty_hash` over the normalized text. Output is pushed to the working layer, not published to the shared layer.
+Runs per utterance. Small GPT classifier prompt: given utterance + last alignment snapshot, emit zero or more typed deltas (see §13.1) with confidence and a `novelty_hash` over the normalized text. Output is pushed to the working layer, not published to the shared layer.
 
 Cost profile: ~500 input + 200 output tokens per call. Fires only on human utterances (not orchestrator output, not claim events).
 
@@ -239,7 +714,7 @@ Template-driven, LLM-filled. Input: current alignment snapshot + ADR state + cur
 One-shot from an approved ADR revision. Template in §16. Emits a draft implementation plan with workstream-level granularity, reuse suggestions, and any required guardrail exception slots. Never runs automatically — humans trigger after ADR approval.
 
 ### 11.7 Pattern service
-Reads `data/patterns.json` at boot. Tag-match + substring match over problem statement. Returns top 5 with a one-line "why this matches" from Haiku. No embeddings, no ranking, no promotion workflow in the POC.
+Reads `data/patterns.json` at boot. Tag-match + substring match over problem statement. Returns top 5 with a one-line "why this matches" from a lightweight GPT model. No embeddings, no ranking, no promotion workflow in the POC.
 
 ### 11.8 Guardrail service
 Stores workspace-level defaults and room-level overrides. For the demo, it can seed from `data/guardrails.json` and persist active values in SQLite. Exposes hard constraints, soft preferences, and reuse policy to the orchestrator, ADR compiler, and plan generator.
@@ -383,10 +858,8 @@ Every synthesis carries pointers back to the raw events it drew from. This is ho
 
 ### 13.6 Latency budget
 
-- Classifier (Haiku): p50 ≤ 800ms, p95 ≤ 2s
-- Orchestrator (Sonnet): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
-- Classifier (OpenAI `gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): target the same p50 ≤ 800ms, p95 ≤ 2s budget
-- Orchestrator (OpenAI `gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): target the same p50 ≤ 3s, p95 ≤ 6s from batch close to publish
+- Classifier (`gpt-5.4-nano` or `gpt-5-mini`, with `reasoning.effort` set to `none` or `minimal`): p50 ≤ 800ms, p95 ≤ 2s
+- Orchestrator (`gpt-5.4-mini` or `gpt-5.4`, with `reasoning.effort` set to `low` unless evals justify more): p50 ≤ 3s, p95 ≤ 6s from batch close to publish
 - WebSocket fanout: ≤ 100ms
 
 These are product latency targets, not vendor guarantees. OpenAI model selection should prefer the smallest model that meets orchestrator-quality evals and the routing guidance in §23.1.
@@ -414,7 +887,7 @@ Ship a seeded flat library. No promotion workflow, no embeddings, no ranking sig
 
 - **Storage:** `data/patterns.json`, ~10 curated entries at launch.
 - **Schema (POC):** `id, title, problem, tags[], approach, preferred_libraries[], anti_patterns[], references[]`. No versioning, no owner, no applicability rules.
-- **Retrieval:** tag match + substring on problem statement. Haiku adds a one-line "why this matches" at display time.
+- **Retrieval:** tag match + substring on problem statement. A lightweight GPT model adds a one-line "why this matches" at display time.
 - **Promotion:** out of scope. At most, a human can mark "this session produced a pattern worth capturing" → writes a TODO to a file for later human curation.
 
 ### 14.2 Workspace guardrails
@@ -855,13 +1328,6 @@ The ADR draft pane should expose:
 
 ### 23.1 Model routing
 
-- **Classifier per utterance:** Claude Haiku 4.5 — fast, cheap, small prompt
-- **Orchestrator synthesis:** Claude Sonnet 4.6 — better instruction-following on structured output
-- **ADR section draft:** Claude Sonnet 4.6 — one-shot, on demand
-- **Plan generation:** Claude Sonnet 4.6 — one-shot, on an approved ADR revision
-
-OpenAI parity routing:
-
 - **Classifier per utterance:** `gpt-5.4-nano` first, `gpt-5-mini` as fallback when the nano path misses extraction quality; keep `reasoning.effort` at `none` or `minimal`
 - **Orchestrator synthesis:** `gpt-5.4-mini` first for lower latency; escalate to `gpt-5.4` only if evals show materially better synthesis / blocker detection; start with `reasoning.effort: low`
 - **ADR section draft:** `gpt-5.4-mini` for fast drafts, `gpt-5.4` for higher-stakes sections such as `Decision`, `Tradeoffs`, and `Implementation guidance`
@@ -879,10 +1345,10 @@ Every orchestrator call reuses the same system prompt + alignment-schema stanza 
 
 A 45-minute session, 3 humans, moderate activity:
 
-- ~120 utterances × Haiku classifier (~500 in / 200 out each) ≈ $0.10
-- ~30 orchestrator calls (windows with novelty, out of 270 possible) × Sonnet (~3k in / 500 out each) ≈ $0.45
-- 1 ADR draft-all + 4 section regens × Sonnet ≈ $0.15
-- 1 plan generation × Sonnet ≈ $0.05
+- ~120 utterances × GPT classifier (~500 in / 200 out each) ≈ estimate after first real run
+- ~30 orchestrator calls (windows with novelty, out of 270 possible) × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
+- 1 ADR draft-all + 4 section regens × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
+- 1 plan generation × `gpt-5.4-mini`/`gpt-5.4` ≈ estimate after first real run
 
 Target: **under $1 per session** at POC scale. If this blows out, the orchestrator trigger (§13.2) is the first lever — raise the novelty threshold, lengthen the window.
 

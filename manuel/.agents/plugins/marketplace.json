@@ -1,0 +1,20 @@
+{
+  "name": "hackathon-local",
+  "interface": {
+    "displayName": "Hackathon Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "converge-bridge",
+      "source": {
+        "source": "local",
+        "path": "./plugins/converge-bridge"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
