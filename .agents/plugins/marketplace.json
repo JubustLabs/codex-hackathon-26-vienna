@@ -1,0 +1,20 @@
+{
+  "name": "jubust-local-plugins",
+  "interface": {
+    "displayName": "Jubust Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "codex-room-bridge",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-room-bridge"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

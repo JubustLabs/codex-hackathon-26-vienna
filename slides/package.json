@@ -1,0 +1,17 @@
+{
+  "name": "realtime-alignment-slides",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Slidev deck for the Realtime Alignment Workspace hackathon pitch.",
+  "scripts": {
+    "dev": "bun x slidev --open",
+    "build": "bun x slidev build",
+    "export": "bun x slidev export"
+  },
+  "dependencies": {
+    "@slidev/cli": "latest",
+    "@slidev/theme-seriph": "latest",
+    "vue": "^3.5.0"
+  }
+}

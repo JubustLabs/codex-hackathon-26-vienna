@@ -1,0 +1,43 @@
+default_stages: [pre-commit]
+default_install_hook_types: [pre-commit, pre-push]
+minimum_pre_commit_version: "3.0.0"
+
+repos:
+  - repo: local
+    hooks:
+      - id: workspace-prettier
+        name: workspace format
+        entry: scripts/run-prettier.sh
+        language: system
+        files: ^(README\.md|data/.*|index\.html|justfile|package\.json|scripts/.*|server/.*|shared/.*|slides/.*|src/.*|video/.*|tsconfig\.json|vite\.config\.ts|eslint\.config\.js|\.pre-commit-config\.yaml|\.prettierrc\.json)$
+        pass_filenames: true
+        require_serial: false
+
+      - id: workspace-eslint
+        name: workspace lint
+        entry: scripts/run-eslint.sh
+        language: system
+        files: ^(scripts/.*|server/.*|shared/.*|src/.*|video/src/.*|video/remotion\.config\.ts|video/tsconfig\.json|vite\.config\.ts|eslint\.config\.js).*\.(ts|tsx)$|^(video/remotion\.config\.ts|video/tsconfig\.json|vite\.config\.ts|eslint\.config\.js)$
+        pass_filenames: true
+        require_serial: false
+
+      - id: workspace-typecheck
+        name: workspace typecheck
+        entry: sh -c 'bun run typecheck'
+        language: system
+        files: ^(server/.*|shared/.*|src/.*|vite\.config\.ts|eslint\.config\.js).*\.(ts|tsx)$|^(vite\.config\.ts|eslint\.config\.js)$
+        pass_filenames: false
+        require_serial: false
+
+      - id: workspace-check-merge-conflict
+        name: workspace merge conflict markers
+        entry: sh -c 'if rg -e "^(<<<<<<< |=======|>>>>>>> )" . -g "*.ts" -g "*.tsx" -g "*.json" -g "*.md" -g "*.css" -g "*.yml" -g "*.yaml"; then echo "Found merge conflict markers in workspace"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      - id: workspace-max-lines
+        name: workspace max lines
+        entry: scripts/check-max-lines.sh
+        language: system
+        files: ^(README\.md|data/.*|index\.html|justfile|package\.json|scripts/.*|server/.*|shared/.*|slides/.*|src/.*|video/.*|tsconfig\.json|vite\.config\.ts|eslint\.config\.js|\.pre-commit-config\.yaml|\.prettierrc\.json)$
+        pass_filenames: true
