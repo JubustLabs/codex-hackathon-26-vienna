@@ -78,9 +78,9 @@ class: text-center
 
 **What's missing**
 
-1. A **shared room** where state is synthesized live
+1. A **shared space** where state is synthesized live
 2. **Human control** over what enters it
-3. A **ratchet** from conversation → decision → plan → handoff
+3. A **one-way path** from conversation → decision → plan → handoff
 4. **Evidence** every step traces back to
 
 </div>
@@ -91,11 +91,11 @@ class: text-center
 
 # Our thesis
 
-<p class="ra-tagline text-2xl mt-1">Realtime decision alignment — steered by humans — is possible.</p>
+<p class="ra-tagline text-2xl mt-1">Realtime decisions by humans — <em>IS</em> possible.</p>
 
 <v-clicks depth="2">
 
-- **One shared room** — humans + agents see the same synthesized state
+- **One shared space** — humans + agents see the same synthesized state
 - **Private work stays private** — your agents drop deltas only you see, then *you* promote
 - **Orchestrator, not autopilot** — synthesizes, nudges, routes insights · never decides
 - **Gates, not drift** — decision approved → plan generated → handoff shipped
@@ -148,20 +148,19 @@ Assists — never decides. **Humans stay in the loop.**
 
 ---
 
-# MCP bridge — local context, shared room
+# Codex MCP plugin — local context, shared space
 
 <div class="ra-grid-2 mt-6">
 
 <div>
 
-Each person runs a tiny **MCP server** next to their local codex.<br/>
-It streams private deltas — IDE tabs, drafts, notes — into the shared API, and lets the room push targeted nudges back.
+Each codex runs the **codex MCP plugin** — a local MCP server at `plugins/codex-room-bridge` that streams private deltas into the shared space and lets the space push targeted nudges back to the editor.
 
 <v-clicks>
 
 - **Realtime** — deltas arrive over WebSockets; the alignment board re-synthesizes in sub-second
 - **Conflict resolution** — when two people touch the same section, the system claims one owner and **pings the other** to resolve
-- **Guardrails** — private work stays private until a human promotes it · approved decisions ratchet forward, never silently rewritten
+- **Guardrails** — private work stays private until a human promotes it · approved decisions move forward only, never silently rewritten
 
 </v-clicks>
 
@@ -171,9 +170,9 @@ It streams private deltas — IDE tabs, drafts, notes — into the shared API, a
 
 **Customer-service agent demo**
 
-- *Maya (Marketing)* drafts in her IDE; her MCP bridge surfaces the pricing-page copy
-- *Sam (Support)* pastes a ticket cluster; MCP redacts PII before it reaches the room
-- *Ivo (IT)* pulls the current DLP rules; MCP attaches them as a constraint node
+- *Maya (Marketing)* drafts in her IDE; the codex MCP plugin surfaces the pricing-page copy
+- *Sam (Support)* pastes a ticket cluster; the plugin redacts PII before it reaches the space
+- *Ivo (IT)* pulls the current DLP rules; the plugin attaches them as a constraint node
 
 Three departments converge to one shared decision **without a single status meeting.**
 
@@ -240,12 +239,6 @@ If the video is missing, run from the repo root: `just demo` (renders with Remot
 
 </div>
 
-<div v-click class="ra-card mt-3 text-sm">
-
-**Failure demo** — switch to *draft_adr* with an unresolved blocker and the system refuses until you resolve, dissent, or mark it non-blocking.
-
-</div>
-
 </div>
 
 </div>
@@ -254,27 +247,39 @@ If the video is missing, run from the repo root: `just demo` (renders with Remot
 
 # Architecture
 
-<div class="mt-2 text-sm opacity-75">One shared room · private deltas · one ratchet from decision to handoff.</div>
+<div class="mt-2 text-sm opacity-75">One shared space · private deltas · one forward-only path from decision to handoff.</div>
 
 <div class="flex justify-center mt-4">
 
-```mermaid {scale: 0.55}
+```mermaid {theme: 'base', themeVariables: { primaryColor: '#eaf2ff', primaryTextColor: '#17479d', primaryBorderColor: '#2f69d1', lineColor: '#2f69d1', fontFamily: 'Inter, system-ui, sans-serif'}, scale: 0.75}
 flowchart LR
-  subgraph client[Browser]
-    H[Humans]
-    A[Private agents]
+  classDef client fill:#eaf2ff,stroke:#2f69d1,stroke-width:1.5px,color:#17479d;
+  classDef core fill:#17479d,stroke:#17479d,stroke-width:2px,color:#ffffff;
+  classDef orch fill:#b67a18,stroke:#b67a18,stroke-width:2px,color:#ffffff;
+  classDef artifact fill:#1f7a5a,stroke:#1f7a5a,stroke-width:2px,color:#ffffff;
+
+  subgraph client[" Browser "]
+    H([Humans])
+    A([Private agents])
   end
-  subgraph server[Bun + SQLite]
-    R[Shared room]
-    O[Orchestrator]
-    ADR[Decision]
-    PL[Plan]
-    HO[Handoff]
+
+  subgraph server[" Bun + SQLite "]
+    R[[Shared space]]
+    O{{Orchestrator}}
+    ADR[/Decision/]
+    PL[/Plan/]
+    HO[/Handoff/]
   end
-  H -->|utterances| R
-  A -->|deltas| R
+
+  H -- utterances --> R
+  A -- deltas --> R
   R <--> O
   R --> ADR --> PL --> HO
+
+  class H,A client
+  class R core
+  class O orch
+  class ADR,PL,HO artifact
 ```
 
 </div>

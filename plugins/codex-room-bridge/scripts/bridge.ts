@@ -179,7 +179,18 @@ async function runSubmit(options: Options) {
   }
 
   const requestId = nextRequestId();
-  const socket = new WebSocket(buildSocketUrl(options));
+  const socket = await connectWithRetry(buildSocketUrl(options), "agent-ws");
+
+  // Socket is already open — fire the submit immediately.
+  socket.send(
+    JSON.stringify({
+      type: "agent.delta.submit",
+      requestId,
+      text: options.text,
+      deltaType: options.deltaType,
+      confidence: options.confidence,
+    }),
+  );
 
   await new Promise<void>((resolve, reject) => {
     let settled = false;
@@ -197,18 +208,6 @@ async function runSubmit(options: Options) {
       }
       resolve();
     };
-
-    socket.addEventListener("open", () => {
-      socket.send(
-        JSON.stringify({
-          type: "agent.delta.submit",
-          requestId,
-          text: options.text,
-          deltaType: options.deltaType,
-          confidence: options.confidence,
-        }),
-      );
-    });
 
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(
@@ -257,8 +256,65 @@ async function runSubmit(options: Options) {
   });
 }
 
+// Surface ECONNRESET from the underlying TCP socket as a warning instead of a
+// crash. Bun/Node sometimes bubble the raw TCP reset up to `process` before
+// the WebSocket wraps it into a proper `error` / `close` event — without this
+// handler the watch pane dies with
+//   "ECONNRESET at TcpOnStreamRead (node:internal/stream_base_commons:...)"
+// and tmux just shows the trace. We log instead and let the WebSocket's own
+// close handler drive the reconnect loop below.
+process.on("uncaughtException", (error: NodeJS.ErrnoException) => {
+  if (error?.code === "ECONNRESET") {
+    console.log("[warn] upstream reset the connection — reconnecting…");
+    return;
+  }
+  throw error;
+});
+
+async function connectWithRetry(url: string, label: string): Promise<WebSocket> {
+  const maxAttempts = 10;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const socket = new WebSocket(url);
+    const opened = await new Promise<boolean>((resolve) => {
+      const onOpen = () => {
+        socket.removeEventListener("open", onOpen);
+        socket.removeEventListener("error", onError);
+        socket.removeEventListener("close", onClose);
+        resolve(true);
+      };
+      const onError = () => {
+        socket.removeEventListener("open", onOpen);
+        socket.removeEventListener("error", onError);
+        socket.removeEventListener("close", onClose);
+        resolve(false);
+      };
+      const onClose = () => {
+        socket.removeEventListener("open", onOpen);
+        socket.removeEventListener("error", onError);
+        socket.removeEventListener("close", onClose);
+        resolve(false);
+      };
+      socket.addEventListener("open", onOpen);
+      socket.addEventListener("error", onError);
+      socket.addEventListener("close", onClose);
+    });
+    if (opened) {
+      if (attempt > 1) {
+        console.log(`[info] ${label} connected after ${attempt} attempts`);
+      }
+      return socket;
+    }
+    const delay = Math.min(2500, 300 * attempt);
+    console.log(
+      `[info] ${label} not ready yet (attempt ${attempt}/${maxAttempts}) — retrying in ${delay}ms`,
+    );
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  throw new Error(`${label} never came up after ${maxAttempts} attempts`);
+}
+
 async function runWatch(options: Options) {
-  const socket = new WebSocket(buildSocketUrl(options));
+  const socket = await connectWithRetry(buildSocketUrl(options), "agent-ws");
   const requests = new Map<string, string>();
   const rl = readline.createInterface({
     input: process.stdin,
@@ -285,6 +341,16 @@ async function runWatch(options: Options) {
     console.log(`[queued] ${trimmed}`);
   };
 
+  // Socket is already open (connectWithRetry waited for it). Print the
+  // banner and seed any initial --text up front so we don't rely on an
+  // "open" event that already fired.
+  console.log("Bridge connected. Type one insight per line and press Enter.");
+  console.log("Use Ctrl+C to stop.");
+  if (options.text?.trim()) {
+    submitLine(options.text);
+  }
+  rl.prompt();
+
   await new Promise<void>((resolve, reject) => {
     let settled = false;
 
@@ -301,17 +367,6 @@ async function runWatch(options: Options) {
       }
       resolve();
     };
-
-    socket.addEventListener("open", () => {
-      console.log(
-        "Bridge connected. Type one insight per line and press Enter.",
-      );
-      console.log("Use Ctrl+C to stop.");
-      if (options.text?.trim()) {
-        submitLine(options.text);
-      }
-      rl.prompt();
-    });
 
     rl.on("line", (line) => {
       submitLine(line);

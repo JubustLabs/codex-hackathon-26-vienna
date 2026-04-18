@@ -1,7 +1,7 @@
 # Tackling multiplayer: Realtime Decision Alignment
 
 It has never been easier to generate code.
-But agreeing on what to do (scoping) is stil hard.
+But agreeing on what to do (scoping) is still hard.
 Often, agents of one person are fighting instead of collaborating with agents of another person.
 This demo intends to show that real-time decision alignment is possible steered by humans.
 
