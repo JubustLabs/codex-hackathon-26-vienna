@@ -10,6 +10,10 @@ LONG_VIDEO="$ROOT_DIR/video/out/realtime-alignment-long.mp4"
 THUMBNAIL="$ROOT_DIR/video/out/thumbnail.png"
 AUTOPILOT_CAPTURE="$ROOT_DIR/video/public/autopilot-capture.webm"
 EMBEDDED_DECK_VIDEO="$ROOT_DIR/slides/public/hackathon-video.mp4"
+CAPTURE_DURATION="${EXPORT_DEMO_CAPTURE_DURATION:-90}"
+CAPTURE_TEMPO="${EXPORT_DEMO_CAPTURE_TEMPO:-3200}"
+REFRESH_CAPTURE="${EXPORT_DEMO_REFRESH_CAPTURE:-0}"
+DEV_PID=""
 
 derive_github_pages_url() {
   local remote
@@ -28,13 +32,65 @@ derive_github_pages_url() {
   return 1
 }
 
-if [[ ! -f "$AUTOPILOT_CAPTURE" ]]; then
-  echo "Missing long-video source asset: $AUTOPILOT_CAPTURE" >&2
-  echo "Create it with 'just video-capture' or 'just video-long-pipeline' first." >&2
-  exit 1
-fi
+cleanup() {
+  if [[ -n "$DEV_PID" ]]; then
+    kill "$DEV_PID" 2>/dev/null || true
+    wait "$DEV_PID" 2>/dev/null || true
+    DEV_PID=""
+  fi
+}
+
+trap cleanup EXIT
+
+wait_for_url() {
+  local url="$1"
+  local label="$2"
+
+  for _ in $(seq 1 90); do
+    if curl -fsS "$url" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "$label did not become ready at $url" >&2
+  return 1
+}
+
+ensure_autopilot_capture() {
+  if [[ "$REFRESH_CAPTURE" != "1" && -f "$AUTOPILOT_CAPTURE" ]]; then
+    echo "• Reusing existing autopilot capture"
+    return 0
+  fi
+
+  local started_dev=0
+  if ! curl -fsS http://localhost:3001/api/rooms >/dev/null 2>&1 || \
+    ! curl -fsS http://localhost:5173 >/dev/null 2>&1; then
+    echo "• Starting local app for capture generation"
+    export ALLOW_LOCAL_HEURISTIC_FALLBACK=1
+    (
+      cd "$ROOT_DIR"
+      bun run dev
+    ) >/tmp/realtime-alignment-export-demo-dev.log 2>&1 &
+    DEV_PID=$!
+    started_dev=1
+  fi
+
+  if [[ "$started_dev" == "1" ]]; then
+    wait_for_url "http://localhost:3001/api/rooms" "Backend"
+    wait_for_url "http://localhost:5173" "Frontend"
+  fi
+
+  echo "• Recording autopilot capture"
+  (
+    cd "$ROOT_DIR"
+    bun scripts/record-autopilot.ts --duration "$CAPTURE_DURATION" --tempo "$CAPTURE_TEMPO"
+  )
+}
 
 mkdir -p "$DEMO_DIR" "$VIDEOS_OUT" "$ROOT_DIR/slides/public"
+
+ensure_autopilot_capture
 
 echo "• Rendering short video"
 (cd "$ROOT_DIR/video" && bun run build)
