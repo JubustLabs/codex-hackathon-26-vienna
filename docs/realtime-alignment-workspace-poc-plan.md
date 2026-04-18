@@ -21,6 +21,8 @@ This product is a real-time alignment workspace. It is **not** an agent debate a
 - a concrete **implementation plan** derived from the approved ADR
 - an optional **handoff package** for downstream agent-assisted execution
 
+The room starts with two explicit context layers before anyone drafts anything: workspace guardrails (what the team is allowed or expected to use) and an evidence-backed catalog of existing components worth reusing (what the team already has). The product should make both visible early so the discussion does not start from a blank slate.
+
 Closest mental model: a collaborative ADR workspace with Google-Docs-like shared presence and fast iteration, but **not** free-form simultaneous paragraph editing. Shared writing is coordinated through visible section ownership because silent overlap is exactly the failure mode this product is trying to remove.
 
 The counter-design we are explicitly avoiding is *N agents talking over each other in a shared timeline while humans scroll past*. Each human may privately attach their own agents, but only typed deltas cross into the shared room, and only one synthesized facilitator voice speaks to the group.
@@ -45,8 +47,9 @@ The first draft must validate, with at least one recorded 3-person session per c
 4. Immediately after approval, at least **80% of participants** pass the post-session alignment check (§25): they can independently restate the problem, decision, key tradeoff, first implementation workstream, and remaining open question / owner with **4 of 5 answers** materially matching the approved ADR+plan.
 5. The final ADR has **all 12 sections (§15.2) populated** before approval, and every section has been explicitly human-reviewed before approval.
 6. The implementation plan has an **accepted owner on every workstream** and every open implementation question has a named resolver and next checkpoint before handoff.
-7. Section-level ownership prevents silent overlap across at least one scripted concurrent-edit scenario (§25).
-8. **Baseline head-to-head:** in a **45-minute** session on the same topic, same pre-read, and same participant count, the workspace beats "Google Doc + Claude copy-paste + facilitated meeting" on both: (a) blind review of the exported ADR+plan using the rubric in §25 (problem framing, decision clarity, tradeoff explicitness, implementation specificity, owner clarity) by 2 of 3 reviewers, and (b) the post-session participant alignment check.
+7. When relevant existing components or hard workspace guardrails exist, the final ADR+plan either references them explicitly or records a human-readable justification for not using them.
+8. Section-level ownership prevents silent overlap across at least one scripted concurrent-edit scenario (§25).
+9. **Baseline head-to-head:** in a **45-minute** session on the same topic, same pre-read, and same participant count, the workspace beats "Google Doc + Claude copy-paste + facilitated meeting" on both: (a) blind review of the exported ADR+plan using the rubric in §25 (problem framing, decision clarity, tradeoff explicitness, implementation specificity, owner clarity) by 2 of 3 reviewers, and (b) the post-session participant alignment check.
 
 The combined baseline comparison is the load-bearing one. Without it, the other metrics are self-referential.
 
@@ -62,6 +65,7 @@ Explicitly deferred:
 - **CRDT-based co-editing** — we use section-level pessimistic locks via ownership claims instead (§12.4)
 - external identity, SSO, advanced RBAC
 - pattern-memory promotion workflows, versioning, ranking signals — POC ships a flat seeded library only
+- deep semantic code-graph analysis or runtime tracing for component discovery — the POC uses evidence-backed manifest / repo discovery plus human confirmation
 
 ## 5. Design Principles
 
@@ -92,6 +96,12 @@ Shared truth, permissions, events, and decisions live in a central backend. Atta
 ### 5.9 Alignment is shared understanding, not unanimous enthusiasm
 Formal approval belongs to a named decision-owner set, but the product is optimizing for room-level clarity. Participants should leave able to restate the same problem, decision, tradeoffs, and next steps even when dissent is recorded.
 
+### 5.10 Reuse before invention
+When an existing component already fits the decision space, the room should see it before inventing something new. Reuse is not mandatory in every case, but net-new components require an explicit reason.
+
+### 5.11 Guardrails are explicit product inputs
+Technology preferences and constraints such as "we use Rust", "prefer Postgres", or "do not add a second queue" belong in structured guardrails, not buried in prompts or tribal memory.
+
 ## 6. Primary Users
 
 - **Decision owners.** 1-3 humans named when the room is created. They are accountable for the final decision and form the formal approval set for the ADR and plan.
@@ -103,10 +113,12 @@ Formal approval belongs to a named decision-owner set, but the product is optimi
 ## 7. End-to-End User Journey
 
 ### 7.1 Before the session
-1. A user creates a room with a **decision brief**: topic, topic tags, decision to make, goal, non-goals, scope, success bar, and initial decision owners.
+1. A user creates a room with a **decision brief**: topic, topic tags, decision to make, goal, non-goals, scope, success bar, and initial decision owners. The room inherits workspace guardrails by default; the creator may add room-specific overrides with audit.
 2. Participants are invited by link or email token.
 3. The pattern library pre-fetches matches by topic tags.
-4. (v2) Participants may attach agents.
+4. The component catalog refreshes from workspace evidence sources and surfaces likely reusable components for the topic.
+5. Participants can review the active guardrails before discussion starts.
+6. (v2) Participants may attach agents.
 
 ### 7.2 During the session
 1. Humans type ideas, constraints, tradeoffs.
@@ -114,7 +126,9 @@ Formal approval belongs to a named decision-owner set, but the product is optimi
 3. The facilitator (Sonnet) runs every 10s over the last window + current alignment snapshot, emitting a single `facilitator_update`.
 4. The alignment board updates with: goals, constraints, options, tradeoffs, risks, open questions, agreements, unresolved differences.
 5. Pattern panel surfaces matches with a short "why this" justification.
-6. The facilitator drafts neutral wording when agreement narrows.
+6. Component catalog surfaces likely reusable services/modules/packages with evidence paths and confidence.
+7. Guardrail panel shows hard constraints, soft preferences, and any active option conflicts.
+8. The facilitator drafts neutral wording when agreement narrows and highlights when an option violates a hard guardrail or ignores a likely reusable component.
 
 ### 7.3 Decision point
 1. The room switches to `decide` mode once the option set has been narrowed and the team is ready to make the call.
@@ -134,17 +148,19 @@ Formal approval belongs to a named decision-owner set, but the product is optimi
 1. **Room view** — live discussion + facilitator stream
 2. **Alignment board** — live structured panel (the 8 node types, §12.1)
 3. **Pattern panel** — seeded patterns surfaced by tag match
-4. **Ownership board** — live claims and overlap warnings
-5. **ADR editor** — structured, section-locked
-6. **Implementation plan editor** — workstream-level, section-locked
+4. **Component catalog panel** — autodiscovered reusable components with evidence and human confirmation state
+5. **Guardrails panel** — workspace constraints/preferences and room overrides
+6. **Ownership board** — live claims and overlap warnings
+7. **ADR editor** — structured, section-locked
+8. **Implementation plan editor** — workstream-level, section-locked
 
 The per-human perspective pane for attached agents is a v2 surface and is intentionally absent from the POC UI, even though the protocol stub exists (§19).
 
 ## 9. POC Scope
 
-**In:** text-first collaboration, one workspace, one live room type, one facilitator stream, seeded pattern library, ADR drafting + approval, implementation plan generation + approval, live ownership, audit log.
+**In:** text-first collaboration, one workspace, one live room type, one facilitator stream, seeded pattern library, workspace guardrails, evidence-backed component autodiscovery, ADR drafting + approval, implementation plan generation + approval, live ownership, audit log.
 
-**Out:** voice, video, multiple room archetypes, multi-workspace federation, external IdPs, analytics dashboards, autonomous execution, the full attached-agent protocol and any participant-facing perspective pane (kept as a stub only, §19).
+**Out:** voice, video, multiple room archetypes, multi-workspace federation, external IdPs, analytics dashboards, autonomous execution, the full attached-agent protocol and any participant-facing perspective pane (kept as a stub only, §19), and deep whole-codebase semantic discovery beyond evidence-backed POC heuristics.
 
 ---
 
@@ -157,6 +173,8 @@ React Client(s)
   <-> Bun HTTP + WebSocket server
         -> Session Manager (room lifecycle, presence, locks)
         -> Event Store (SQLite append-only)
+        -> Guardrail Service (workspace defaults + room overrides)
+        -> Component Catalog Service (manifest/repo scan + confirmation state)
         -> Classifier Worker (per-utterance, Haiku)
         -> Facilitator Worker (windowed, Sonnet)
         -> ADR Compiler (on-demand)
@@ -198,15 +216,21 @@ Cost profile: ~500 input + 200 output tokens per call. Fires only on human utter
 The product's center of gravity. See §13 for the full spec. One call every 10s over the last window, or on manual "synthesize now". Emits exactly one `facilitator_update` event.
 
 ### 11.4 ADR compiler
-Template-driven, LLM-filled. Input: current alignment snapshot + ADR state. Output: section-level diffs keyed by §15.2 headers. Called on demand from the UI ("regenerate section" or "draft all"), not on every tick.
+Template-driven, LLM-filled. Input: current alignment snapshot + ADR state + active guardrails + relevant confirmed components. Output: section-level diffs keyed by §15.2 headers. Called on demand from the UI ("regenerate section" or "draft all"), not on every tick.
 
 ### 11.5 Plan generator
-One-shot from approved ADR. Template in §16. Emits a draft implementation plan with workstream-level granularity. Never runs automatically — humans trigger after ADR approval.
+One-shot from approved ADR. Template in §16. Emits a draft implementation plan with workstream-level granularity, reuse suggestions, and any required guardrail exception slots. Never runs automatically — humans trigger after ADR approval.
 
 ### 11.6 Pattern service
 Reads `data/patterns.json` at boot. Tag-match + substring match over problem statement. Returns top 5 with a one-line "why this matches" from Haiku. No embeddings, no ranking, no promotion workflow in the POC.
 
-### 11.7 Agent gateway stub (v2)
+### 11.7 Guardrail service
+Stores workspace-level defaults and room-level overrides. For the demo, it can seed from `data/guardrails.json` and persist active values in SQLite. Exposes hard constraints, soft preferences, and reuse policy to the facilitator, ADR compiler, and plan generator.
+
+### 11.8 Component catalog service
+Builds a workspace-local catalog of likely reusable components from evidence-first sources: `Cargo.toml`, workspace manifests, `package.json`, `pyproject.toml`, lockfiles, infra manifests, conventional repo paths (`crates/`, `packages/`, `services/`), and existing ADR Markdown. Produces candidate entries with file-path evidence and confidence. Humans can confirm or ignore entries; pure LLM-only discovery is not sufficient for POC truth.
+
+### 11.9 Agent gateway stub (v2)
 A single registered endpoint and typed-delta ingest path. Present for schema completeness so v2 can ship without breaking changes. No capability negotiation, no remote runtimes in the POC.
 
 ## 12. Realtime Collaboration Model
@@ -245,14 +269,14 @@ This schema is **frozen for the POC**. Every downstream component targets it.
 
 - **Raw layer.** Every utterance, every private agent output, every classifier delta.
 - **Working layer.** Deduplicated deltas, clustered by novelty hash, importance-scored. Internal — not shown to humans directly.
-- **Shared layer.** Only facilitator updates, alignment snapshots, pattern suggestions, ADR/plan diffs, ownership events.
+- **Shared layer.** Only facilitator updates, alignment snapshots, pattern suggestions, component suggestions, guardrail alerts, ADR/plan diffs, ownership events.
 
 ### 12.3 Room modes
 
 - `explore` — encourage options and constraints, facilitator emphasizes breadth
 - `narrow` — collapse duplicates, force tradeoff clarity, facilitator asks focusing questions
 - `decide` — produce candidate wording, expose final blockers, and attach explicit dissent where needed
-- `draft_adr` — focus shifts to the ADR editor; facilitator writes section drafts on request. Entry is blocked while any `unresolved_difference` remains without a linked dissent record
+- `draft_adr` — focus shifts to the ADR editor; facilitator writes section drafts on request. Entry is blocked while any `unresolved_difference` remains without a linked dissent record or explicit `non_blocking` mark
 
 Normal path: `explore` -> `narrow` -> `decide` -> `draft_adr`. Humans switch modes. The facilitator can recommend a mode switch but cannot force one. A room may move backward if new blockers appear.
 
@@ -281,6 +305,8 @@ This is the single most important component. Getting it right beats everything e
 | `tradeoff_detected` | text, confidence, related_option_id? |
 | `risk_detected` | text, confidence, related_option_id? |
 | `open_question_detected` | text, confidence |
+| `component_reference` | component_id, relation: `reuse`/`extend`/`replace`/`new` |
+| `guardrail_signal` | rule_key, disposition: `supports`/`conflicts`, severity: `hard`/`soft` |
 | `agreement_signal` | pointer to option/goal id, signal strength |
 | `disagreement_signal` | pointer to option/goal id, signal strength |
 | `duplicate_of` | pointer to existing node id |
@@ -302,6 +328,8 @@ Skips (no-op) if: zero novelty since last run (measured by novelty hashes).
 - Last N=50 raw events (utterances, deltas, claim events) from the window
 - Current alignment snapshot (all nodes)
 - Room mode
+- Active guardrail snapshot
+- Top matched confirmed components
 - Current ADR draft headers only (not full body)
 
 ### 13.4 Facilitator output contract
@@ -341,13 +369,19 @@ Every synthesis carries pointers back to the raw events it drew from. This is ho
 Human-facing room controls:
 - "show only blockers"
 - "show only common ground"
+- "show guardrail conflicts"
+- "show reusable components"
 - "switch to decide mode"
 - "suppress pattern suggestions"
 - "freeze wording on section X"
 - "promote draft to ADR"
 - "reject last synthesis"
 
-## 14. Pattern Memory (POC scope)
+## 14. Patterns, Guardrails, and Components (POC scope)
+
+The POC ships three explicit decision-context inputs: seeded patterns, explicit workspace guardrails, and an evidence-backed component catalog.
+
+### 14.1 Pattern memory
 
 Ship a seeded flat library. No promotion workflow, no embeddings, no ranking signals — those are v2.
 
@@ -355,6 +389,39 @@ Ship a seeded flat library. No promotion workflow, no embeddings, no ranking sig
 - **Schema (POC):** `id, title, problem, tags[], approach, preferred_libraries[], anti_patterns[], references[]`. No versioning, no owner, no applicability rules.
 - **Retrieval:** tag match + substring on problem statement. Haiku adds a one-line "why this matches" at display time.
 - **Promotion:** out of scope. At most, a human can mark "this session produced a pattern worth capturing" → writes a TODO to a file for later human curation.
+
+### 14.2 Workspace guardrails
+
+Guardrails are explicit inputs that shape the decision and the generated artifacts.
+
+- **Storage:** seeded from `data/guardrails.json` for the demo, persisted in SQLite, editable in workspace settings, and snapshotted into each room at creation.
+- **Schema (POC):**
+
+```json
+{
+  "allowed_languages": ["rust"],
+  "preferred_frameworks": ["axum", "sqlx"],
+  "preferred_libraries": ["tokio", "serde"],
+  "banned_technologies": ["kafka"],
+  "required_platforms": ["postgres"],
+  "reuse_policy": "require_existing_or_justify",
+  "notes": ["Prefer extending an existing service before adding a new one."]
+}
+```
+
+- **Semantics:** hard guardrails act like formal constraints; soft guardrails act like strong defaults that can be overridden with justification.
+- **Overrides:** a room may add scoped overrides, but they are audited and shown to all participants.
+- **Enforcement:** the facilitator flags conflicts during discussion; ADR and plan approval are blocked on unresolved hard-guardrail conflicts unless an explicit exception is recorded.
+
+### 14.3 Component catalog
+
+Autodiscovery is evidence-backed, not magic.
+
+- **Discovery sources:** `Cargo.toml`, workspace manifests, `package.json`, `pyproject.toml`, lockfiles, infra manifests, conventional directories, and existing ADR Markdown.
+- **Schema (POC):** `id, name, kind, summary?, inferred_tags[], repo_paths[], evidence[], owner?, confidence, status`. Status is one of `candidate`, `confirmed`, or `ignored`.
+- **Confirmation:** humans can confirm or ignore discovered entries. Only confirmed entries count as trusted reusable components in approval gating.
+- **Retrieval:** match topic tags + problem statement + guardrails against component names, tags, kinds, and evidence paths; surface top matches with "why this is relevant".
+- **Scope limit:** no deep static analysis, runtime traffic mining, or automatic dependency graph understanding in the POC.
 
 Richer pattern memory returns when §28 Q5 (ranking signals) has real session data to learn from.
 
@@ -391,6 +458,7 @@ The ADR is the durable boundary between live reasoning and implementation. It ma
 - Approval requires unanimous approval from the current decision-owner set.
 - Approval requires all 12 sections non-empty.
 - Approval requires every section to have been explicitly human-reviewed, even if its initial text came from the facilitator.
+- Approval is blocked if the chosen option violates an active hard guardrail without a recorded exception.
 - Approval records snapshot of alignment state and the active decision-owner set at that moment (for audit).
 
 ### 15.5 Disagreement handling
@@ -403,6 +471,13 @@ This is a first-class flow, not an edge case.
 - Approval with recorded dissent transitions to `approved` with sub-state `dissent_recorded`.
 
 This matters because the product is supposed to *handle* disagreement, not assume it away.
+
+### 15.6 Guardrail and reuse rules
+
+- `Constraints` must reflect active hard guardrails relevant to the decision.
+- `Decision` or `Implementation guidance` must name the confirmed existing components being reused, extended, or replaced when such components are materially relevant.
+- If the ADR chooses a net-new component while a matching confirmed component exists, the ADR must record why reuse was rejected.
+- If the ADR intentionally breaks a soft guardrail, the rationale must be written down in `Tradeoffs` or `Consequences`.
 
 ## 16. Implementation Plan and Handoff
 
@@ -419,8 +494,10 @@ Every plan has exactly these sections:
 3. **Sequence and dependencies** — explicit cross-workstream order, external dependencies, and critical path
 4. **Deliverables and acceptance checks** — what "done" means for each workstream
 5. **Open implementation questions** — carried forward from alignment state
-6. **Pattern references** — which patterns inform which workstreams
-7. **Risks and rollout notes** — implementation-specific risks, migration notes, and rollout cautions distinct from decision-level risks
+6. **Existing components to reuse** — which confirmed components each workstream reuses, extends, or replaces
+7. **Pattern references** — which patterns inform which workstreams
+8. **Guardrail exceptions** — any justified deviations from workspace defaults or hard constraints
+9. **Risks and rollout notes** — implementation-specific risks, migration notes, and rollout cautions distinct from decision-level risks
 
 ### 16.3 Workstream granularity
 
@@ -435,6 +512,8 @@ Every plan has exactly these sections:
   depends_on[],             // other workstream ids
   deliverables[],
   acceptance_checks[],
+  component_refs[],         // [{ component_id, relation, note? }]
+  guardrail_exceptions[],   // [{ rule_key, justification }]
   first_step,
   rollout_notes?,
   open_questions[],         // [{ text, resolver_id, due_before }]
@@ -455,6 +534,7 @@ This granularity is deliberate: finer becomes project management, coarser stops 
 - Approval requires unanimous approval from the current decision-owner set.
 - Approval requires every workstream to have an accepted owner, at least one deliverable, and at least one acceptance check.
 - Open implementation questions are allowed only when each question is attached to a workstream, has a named resolver, and has an explicit `due_before` checkpoint. Unowned "we'll figure it out later" questions block plan approval.
+- Approval requires every net-new component or hard-guardrail exception to carry explicit justification and a named owner for validation / follow-up.
 - Approval records the source ADR version and the plan snapshot used for approval.
 
 ### 16.6 Ownership and claims
@@ -470,12 +550,15 @@ The optional artifact — approved ADR + approved plan + referenced patterns + a
 | Entity | Purpose |
 | --- | --- |
 | `workspace` | Top-level collaboration boundary |
+| `workspace_guardrail` | Structured tech constraints/preferences and reuse policy |
 | `room` | A live session |
 | `participant` | Human in a room |
 | `agent_runtime` | (v2) Connected attached agent |
 | `utterance` | Raw human contribution |
 | `agent_delta` | Typed classifier or agent output. `source_event_ids[]`, `supersedes?` |
 | `alignment_node` | Goal / constraint / option / tradeoff / risk / question / agreement / unresolved_difference |
+| `component_catalog_entry` | Autodiscovered or confirmed reusable module/service/package |
+| `component_evidence` | File-path or document evidence for a component entry |
 | `facilitator_update` | Shared synthesized update. `source_event_ids[]`, `supersedes?` |
 | `pattern` | Seeded library entry |
 | `adr` | Formal decision record, section-keyed |
@@ -495,7 +578,12 @@ Every derived entity (`agent_delta`, `facilitator_update`, `alignment_node`) car
 
 ```
 room.created
+workspace.guardrails.updated       { fields, changed_by }
+component.catalog.refreshed        { component_count, changed_by }
+component.entry.confirmed          { component_id, changed_by }
+component.entry.ignored            { component_id, changed_by }
 room.brief.updated                { brief_fields, changed_by }
+room.guardrails.overridden        { fields, changed_by }
 room.decision_owners.updated      { decision_owner_ids[], changed_by }
 room.mode_changed                 { mode: 'explore'|'narrow'|'decide'|'draft_adr' }
 participant.joined
@@ -505,6 +593,8 @@ agent.delta.submitted             { delta_type, payload, source_utterance_id } /
 alignment.correction.submitted    { node_id, proposed_type?, proposed_text?, source_event_ids[] }
 alignment.node.updated            { op, node }
 pattern.suggested                 { pattern_id, justification, source_event_ids[] }
+component.suggested               { component_id, justification, source_event_ids[] }
+guardrail.alerted                 { rule_key, severity, note, source_event_ids[] }
 facilitator.update.published      { ...§13.4 contract }
 facilitator.update.delayed        { reason }
 facilitator.correction            { rejected_update_id, reason }
@@ -563,6 +653,8 @@ Rationale: the agent integration protocol is a multi-week project. If we do it b
 ## 20. Permissions and Governance
 
 - Room owners create the decision brief, nominate the initial decision-owner set, invite participants, and start decision mode
+- Room owners can create scoped guardrail overrides for their room; those overrides are visible and audited
+- Workspace owners define default guardrails and can refresh / confirm the component catalog
 - Participants contribute; (v2) attach their own agents
 - **Only human decision owners** approve ADRs and plans
 - Any participant may raise an unresolved difference; it must be resolved, recorded as dissent, or marked `non_blocking` before approval can proceed
@@ -576,9 +668,16 @@ Rationale: the agent integration protocol is a multi-week project. If we do it b
 
 ```
 POST /api/workspaces
+GET  /api/workspaces/:id/guardrails
+PATCH /api/workspaces/:id/guardrails
+GET  /api/workspaces/:id/components
+POST /api/workspaces/:id/components/refresh
+POST /api/workspaces/:id/components/:componentId/confirm
+POST /api/workspaces/:id/components/:componentId/ignore
 POST /api/rooms
 GET  /api/rooms/:id
 PATCH /api/rooms/:id/brief
+PATCH /api/rooms/:id/guardrails
 POST /api/rooms/:id/join
 POST /api/rooms/:id/decision-owners       { decision_owner_ids[] }
 POST /api/rooms/:id/utterances
@@ -626,16 +725,17 @@ The repo currently ships the "Predictive Bug Fix" scaffold (React + Vite, no bac
 /                     workspace overview
 /rooms/new            create room
 /rooms/:roomId        live brainstorm room
+/components           workspace component catalog
 /patterns             seeded pattern library
 /adrs/:adrId          ADR detail (read-only view outside a room)
 /plans/:planId        plan detail (read-only view outside a room)
 /handoff/:packageId   implementation package
-/settings             room + agent settings
+/settings             workspace guardrails + room + agent settings
 ```
 
 ### 22.3 Panels inside a room
 
-Human discussion | Facilitator stream | Alignment board | Pattern suggestions | Ownership board | ADR draft pane | Implementation plan pane
+Human discussion | Facilitator stream | Alignment board | Pattern suggestions | Component catalog | Guardrails | Ownership board | ADR draft pane | Implementation plan pane
 
 The perspective pane remains v2-only and does not ship as a room panel in the POC.
 
@@ -677,6 +777,8 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 - Retire Predictive Bug Fix pages and skill
 - Rewrite `README.md`, route tree, package metadata
 - Add Bun server entrypoint with SQLite schema
+- Seed workspace guardrails and component-catalog tables
+- Add basic evidence-scan job for component refresh
 - Wire HTTP + WebSocket in one process
 - Exit: static room page renders against real server, WebSocket round-trip works
 
@@ -684,6 +786,7 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 - Room create + join + leave
 - Presence over WebSocket
 - Human utterances persisted as append-only events
+- Room state includes active guardrail snapshot and basic component matches
 - Basic room timeline UI
 - Exit: two browsers see each other's messages live
 
@@ -692,6 +795,7 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 - Alignment snapshot reducer targeting the frozen v1 taxonomy (§12.1)
 - Facilitator worker (Sonnet) with full output contract (§13.4)
 - Novelty gating, batching, cap (§13.2, §13.5)
+- Guardrail snapshot + matched component inputs wired into facilitator context
 - Alignment board UI with 8 node types
 - Exit: a 10-minute scripted brainstorm produces a coherent alignment snapshot and ≤ 1 facilitator update per 10s
 
@@ -700,6 +804,7 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 - Section-level claim / release / auto-release (§12.4)
 - "Regenerate section" button → ADR compiler call
 - `decide`-mode gate on unresolved differences (§15.5)
+- Guardrail-conflict and reuse-justification gates
 - Dissent recording flow
 - Approval with alignment snapshot
 - Exit: a room can end in an approved ADR, with a scripted dissent case working
@@ -707,14 +812,18 @@ Demo-first ordering. The facilitator engine is second, not fifth — it is the p
 ### Phase 4 — Plan editor and approval (1 day)
 - Plan generation from approved ADR
 - Workstream-level claim / release
+- Existing-component references and guardrail-exception fields per workstream
 - Approval gated on every workstream having an owner
 - Exit: approved ADR produces a reviewed plan with owners
 
-### Phase 5 — Seeded pattern library (0.5 day)
+### Phase 5 — Decision context management (1 day)
 - `data/patterns.json` with ~10 entries
+- `data/guardrails.json` with demo defaults
+- Human confirm / ignore / merge actions for autodiscovered components
+- Dedicated component catalog route and guardrail settings UI
 - Tag + substring retrieval
 - Haiku "why this matches" on display
-- Exit: relevant patterns surface during a brainstorm
+- Exit: relevant patterns, reusable components, and workspace guardrails surface during a brainstorm with dedicated management flows
 
 ### Phase 6 — Handoff package (0.5 day)
 - One-shot bundler: ADR + plan + patterns + alignment snapshot → JSON + Markdown export
@@ -726,8 +835,8 @@ Deferred. See §19.
 ## 25. Testing Strategy
 
 ### Automated
-- Unit: alignment reducer, novelty hashing, claim TTL, dissent gate
-- Integration: room lifecycle, claim contention, WebSocket event ordering
+- Unit: alignment reducer, novelty hashing, claim TTL, dissent gate, guardrail gating, component scan normalization
+- Integration: room lifecycle, claim contention, WebSocket event ordering, component refresh, guardrail snapshotting
 - Contract: facilitator output conforms to §13.4 schema on golden transcripts
 - UI: ADR approval flow, plan approval flow, owner-acceptance gating, ownership overlap warnings
 
@@ -737,7 +846,9 @@ Deferred. See §19.
 - **S3:** noisy 10-minute brainstorm → raw:shared ratio measured ≥ 10:1 (§3 goal 3)
 - **S4:** reconnect mid-session → client replays event log and restores state
 - **S5:** post-session alignment check — participants independently restate problem, decision, key tradeoff, first workstream, and remaining open question / owner
-- **S6:** baseline head-to-head (§3 goal 8) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers + the same participant alignment check in both conditions
+- **S6:** workspace with active guardrails ("Rust only", preferred libraries, banned tech) → facilitator surfaces conflicts and approval is blocked until the ADR / plan records an exception or switches options
+- **S7:** repo with a relevant existing component → component catalog surfaces it, and the plan either reuses it or explicitly justifies a net-new replacement
+- **S8:** baseline head-to-head (§3 goal 9) — same prompt, same pre-read, same participant count, same 45-minute timebox, 3 blind reviewers + the same participant alignment check in both conditions
 
 ### Alignment check protocol
 - Immediately after ADR + plan approval, each participant privately answers five prompts without looking at the exported artifact.
@@ -756,7 +867,7 @@ Deferred. See §19.
 ## 26. Success Metrics
 
 Primary:
-- **Goal 8 (combined baseline head-to-head).** If this fails, the POC failed.
+- **Goal 9 (combined baseline head-to-head).** If this fails, the POC failed.
 - Baseline rubric score by dimension
 - Participant alignment-check pass rate
 - Time from room start to ADR approval
@@ -767,6 +878,8 @@ Primary:
 - Percent ADR sections explicitly human-reviewed before approval
 - Percent plan items with owner accepted before handoff
 - Percent open implementation questions with resolver + checkpoint before handoff
+- Percent approved ADRs referencing confirmed existing components when relevant
+- Percent hard-guardrail exceptions with explicit justification
 - LLM cost per session
 
 Qualitative (from participants):
@@ -795,6 +908,12 @@ Mitigation: workstream-level granularity (§16.3), reject individual-ticket outp
 ### 27.6 The room feels like chat with decorations
 Mitigation: alignment board and ADR draft are always visible primary panels, not side panels.
 
+### 27.7 Component autodiscovery is noisy or hallucinates modules that are not really reusable
+Mitigation: evidence-first discovery only, visible file-path evidence, human confirmation state, and approval gating based only on confirmed entries.
+
+### 27.8 Guardrails become invisible prompt lore instead of product behavior
+Mitigation: explicit guardrails panel, room snapshotting, facilitator conflict surfacing, and approval-time enforcement.
+
 ## 28. Known Dials (not open questions)
 
 These were "open questions" in v0.1. They are tunable parameters now.
@@ -805,6 +924,7 @@ These were "open questions" in v0.1. They are tunable parameters now.
 - **Q4. Approval model for 2–5 humans.** Fixed decision-owner set declared at room creation. Default: unanimous approval from that set, with unresolved differences from any participant requiring resolution, dissent, or `non_blocking` triage. Revisit if rooms get larger.
 - **Q5. Pattern ranking.** Tag + substring only (§14). Embeddings + ranking are v2.
 - **Q6. Plan granularity.** Workstreams, not tickets (§16.3). If users complain it's too coarse, add a "break down" action that expands one workstream into sub-items.
+- **Q7. Component discovery confidence threshold.** Default: only `confirmed` components participate in approval gating. Candidate-only matches remain advisory.
 
 ## 29. Recommended Build Order
 
@@ -815,11 +935,11 @@ Same as §24 phases, because §24 was already ordered by demo value:
 3. **Phase 2: Facilitator engine v0 — the product**
 4. Phase 3: ADR editor + dissent
 5. Phase 4: Plan editor
-6. Phase 5: Pattern library
+6. Phase 5: Decision context management
 7. Phase 6: Handoff package
 8. (Post-POC) Attached-agent protocol
 
-This order preserves a demoable human-centered product by the end of Phase 4 (~5–8 days). Phases 5–6 are polish. Agent connectivity is v2.
+This order preserves a demoable human-centered product by the end of Phase 5 (~6–9 days). Phase 6 is export polish. Agent connectivity is v2.
 
 ## 30. Prior Art and Positioning
 
@@ -830,9 +950,10 @@ What this is **not** reinventing, and why it is still different:
 - **Linear Canvas / Stately** — planning and state machines. No decision-reasoning layer, no facilitator voice.
 - **tldraw + AI / Excalidraw + AI** — visual-first, no consensus model.
 - **Roam / Obsidian + AI** — single-user knowledge, not multi-human alignment.
-- **Shared Google Doc + ChatGPT/Claude copy-paste** — our explicit baseline (§3 goal 7). Cheap, available today, and what teams actually do. We must be meaningfully better than this.
+- **Shared Google Doc + ChatGPT/Claude copy-paste** — our explicit baseline (§3 goal 9). Cheap, available today, and what teams actually do. We must be meaningfully better than this.
 
 The differentiators we are betting on: **one facilitator voice**, **three-layer signal model**, **frozen alignment taxonomy**, **section-level single-writer locks**, and **ADR-as-decision-boundary**.
+The supporting advantage is that the room starts with explicit context: known guardrails and reusable components, not just opinions and generated text.
 
 ## 31. Final Recommendation
 
@@ -842,10 +963,12 @@ Treat the first draft as a focused product experiment:
 - one facilitator voice (Sonnet, 10s windows, full §13.4 contract)
 - one alignment model (the 8-type v1 taxonomy)
 - one seeded pattern library (flat JSON, tag retrieval)
+- one explicit guardrail layer (workspace defaults + room overrides)
+- one evidence-backed component catalog (autodiscovered, then human-confirmed)
 - one ADR as the decision artifact (12 sections, dissent-aware)
 - one implementation plan (workstream-level, owner-accepted, open-question-triaged)
 - one live ownership model (section-level single-writer locks)
 - one optional handoff package
 - attached personal agent teams as v2, not the foundation
 
-If Phases 0–4 hold and the combined baseline result lands, we have evidence that curated AI + structured human alignment beats the shared-doc baseline. That evidence earns the right to build v2 — richer agent connectivity, deeper memory, downstream execution automation. Without that result, the rest is decoration.
+If Phases 0–5 hold and the combined baseline result lands, we have evidence that curated AI + structured human alignment beats the shared-doc baseline. That evidence earns the right to build v2 — richer agent connectivity, deeper memory, downstream execution automation. Without that result, the rest is decoration.
