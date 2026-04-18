@@ -8,6 +8,44 @@ import { api } from "@/lib/api";
 
 const participantKey = (roomId: string) => `georg.participant.${roomId}`;
 
+const AVATAR_COLORS = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
+
+const ALIGNMENT_TYPES = [
+  "goal",
+  "constraint",
+  "option",
+  "tradeoff",
+  "risk",
+  "open_question",
+  "agreement",
+  "unresolved_difference",
+] as const;
+
+function initialsFrom(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return "?";
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function colorFor(id: string) {
+  let sum = 0;
+  for (let i = 0; i < id.length; i++) {
+    sum = (sum + id.charCodeAt(i)) % 997;
+  }
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+}
+
+function roleLabel(role: Participant["role"]) {
+  if (role === "decision_owner") return "Owner";
+  if (role === "contributor") return "Contributor";
+  return "Observer";
+}
+
 function claimOwnerName(snapshot: ReturnType<typeof useLiveRoom>["snapshot"], claim: OwnershipClaim | undefined) {
   if (!snapshot || !claim) {
     return null;
@@ -82,6 +120,8 @@ export function RoomPage() {
   const claimFor = (scopeType: OwnershipClaim["scopeType"], scopeId: string) =>
     snapshot.claims.find((claim) => claim.scopeType === scopeType && claim.scopeId === scopeId);
 
+  const pendingCount = snapshot.pendingDeltas.filter((item) => item.status === "pending").length;
+
   return (
     <section className="room-shell">
       {!me ? (
@@ -89,7 +129,7 @@ export function RoomPage() {
           <form className="panel stack-form" onSubmit={onJoin}>
             <div className="panel-header">
               <h1>Join room</h1>
-              <p>Pick a name and role. Observers are read-only, contributors can edit claimed sections, and decision owners steer and approve.</p>
+              <p>Observers are read-only, contributors can edit claimed sections, decision owners steer the room and approve outputs.</p>
             </div>
             <label className="field">
               <span>Name</span>
@@ -103,7 +143,7 @@ export function RoomPage() {
                 <option value="observer">Observer</option>
               </select>
             </label>
-            {actionError ? <p className="empty-state">{actionError}</p> : null}
+            {actionError ? <p className="empty-state error-state">{actionError}</p> : null}
             <button className="button primary" type="submit">
               Enter room
             </button>
@@ -115,22 +155,29 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Brief</h2>
-            <small>{snapshot.room.mode}</small>
+            <span className="badge">{snapshot.room.mode.replaceAll("_", " ")}</span>
           </div>
           <p>{snapshot.room.decision}</p>
           <p>{snapshot.room.goal}</p>
-          <small>Tags: {snapshot.room.topicTags.join(", ")}</small>
+          <div className="presence-strip" style={{ marginTop: "0.4rem" }}>
+            {snapshot.room.topicTags.map((tag) => (
+              <span className="badge" key={tag}>
+                #{tag}
+              </span>
+            ))}
+          </div>
         </section>
 
         <section className="panel">
           <div className="panel-header">
             <h2>Guardrails</h2>
+            <small>{snapshot.guardrails.length}</small>
           </div>
           {snapshot.guardrails.map((guardrail) => (
             <div className="list-card" key={guardrail.id}>
               <strong>{guardrail.title}</strong>
               <span>{guardrail.description}</span>
-              <small>{guardrail.severity}</small>
+              <small className="role-tag">{guardrail.severity}</small>
             </div>
           ))}
         </section>
@@ -138,12 +185,13 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Components</h2>
+            <small>{snapshot.components.length}</small>
           </div>
           {snapshot.components.map((component) => (
             <div className="list-card" key={component.id}>
               <strong>{component.title}</strong>
               <span>{component.summary}</span>
-              <small>{component.evidence.join(", ")}</small>
+              <small>{component.evidence.join(" · ")}</small>
             </div>
           ))}
         </section>
@@ -151,6 +199,7 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Patterns</h2>
+            <small>{snapshot.patterns.length}</small>
           </div>
           {snapshot.patterns.map((pattern) => (
             <div className="list-card" key={pattern.id}>
@@ -163,14 +212,14 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Ownership</h2>
+            <small>{snapshot.claims.length}</small>
           </div>
           {snapshot.claims.length ? (
             snapshot.claims.map((claim) => (
               <div className="list-card" key={claim.id}>
-                <strong>
-                  {claim.scopeType}: {claim.scopeId}
-                </strong>
-                <span>{claimOwnerName(snapshot, claim)}</span>
+                <strong>{claim.scopeType.replaceAll("_", " ")}</strong>
+                <span>{claim.scopeId}</span>
+                <small className="role-tag">claimed by {claimOwnerName(snapshot, claim)}</small>
               </div>
             ))
           ) : (
@@ -182,8 +231,11 @@ export function RoomPage() {
       <div className="room-column center-column">
         <section className="panel">
           <div className="panel-header">
-            <h1>{snapshot.room.topic}</h1>
-            <div className="row-actions">
+            <div>
+              <p className="eyebrow">Decision room</p>
+              <h1>{snapshot.room.topic}</h1>
+            </div>
+            <div className="segmented" role="tablist" aria-label="Room mode">
               {roomModes.map((mode) => (
                 <button
                   className={snapshot.room.mode === mode ? "button primary" : "button"}
@@ -192,7 +244,7 @@ export function RoomPage() {
                   onClick={() => canSteer && void runAction(() => api.setMode(roomId, me!.id, mode))}
                   type="button"
                 >
-                  {mode}
+                  {mode.replaceAll("_", " ")}
                 </button>
               ))}
             </div>
@@ -203,7 +255,7 @@ export function RoomPage() {
             <div className={snapshot.readiness.unresolvedDifferencesCleared ? "badge success" : "badge"}>No blockers</div>
             <div className={snapshot.readiness.acceptedWorkstreamOwners ? "badge success" : "badge"}>Plan owners</div>
           </div>
-          {actionError ? <p className="empty-state">{actionError}</p> : null}
+          {actionError ? <p className="empty-state error-state">{actionError}</p> : null}
         </section>
 
         <section className="panel">
@@ -213,18 +265,22 @@ export function RoomPage() {
               <button className="button" disabled={!canParticipate} onClick={() => canParticipate && void runAction(() => api.synthesizeNow(roomId, me!.id))} type="button">
                 Synthesize now
               </button>
-              <Link className="button" to={`/adrs/${roomId}`}>
-                ADR detail
+              <Link className="button ghost" to={`/adrs/${roomId}`}>
+                ADR →
               </Link>
-              <Link className="button" to={`/plans/${roomId}`}>
-                Plan detail
+              <Link className="button ghost" to={`/plans/${roomId}`}>
+                Plan →
               </Link>
             </div>
           </div>
           <div className="presence-strip">
             {snapshot.participants.map((participant) => (
-              <span className="presence-pill" key={participant.id}>
-                {participant.displayName} · {participant.role}
+              <span className="presence-pill" key={participant.id} data-role={participant.role}>
+                <span className="avatar" data-color={colorFor(participant.id)} aria-hidden="true">
+                  {initialsFrom(participant.displayName)}
+                </span>
+                <span>{participant.displayName}</span>
+                <span className="role-tag">{roleLabel(participant.role)}</span>
               </span>
             ))}
           </div>
@@ -242,27 +298,30 @@ export function RoomPage() {
           >
             <textarea
               disabled={!canParticipate}
-              placeholder={canParticipate ? "Add a human contribution to the shared room…" : "Observers are read-only in this slice."}
+              placeholder={canParticipate ? "Contribute to the shared room — a thought, a constraint, an option…" : "Observers are read-only in this slice."}
               rows={3}
               value={utterance}
               onChange={(event) => setUtterance(event.target.value)}
             />
-            <button className="button primary" disabled={!canParticipate || !utterance.trim()} type="submit">
-              Send to room
-            </button>
+            <div className="row-actions">
+              <small>Posts to the shared timeline and is classified into alignment nodes.</small>
+              <button className="button primary" disabled={!canParticipate || !utterance.trim()} type="submit">
+                Send to room
+              </button>
+            </div>
           </form>
 
           <div className="timeline">
             {snapshot.orchestratorUpdates.map((update) => (
               <article className="orchestrator-card" key={update.id}>
-                <div className="card-meta">orchestrator</div>
+                <div className="card-meta">Orchestrator synthesis</div>
                 <p>{update.synthesis}</p>
-                {update.suggestedNextMove ? <small>Next move: {update.suggestedNextMove}</small> : null}
+                {update.suggestedNextMove ? <small>Next move · {update.suggestedNextMove}</small> : null}
               </article>
             ))}
             {snapshot.recentEvents.map((event) => (
               <article className="timeline-row" key={event.id}>
-                <strong>{event.type}</strong>
+                <strong>{event.type.replaceAll(".", " · ")}</strong>
                 <span>{event.summary}</span>
               </article>
             ))}
@@ -272,19 +331,11 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Alignment board</h2>
+            <small>{snapshot.alignmentNodes.length} nodes</small>
           </div>
           <div className="alignment-grid">
-            {[
-              "goal",
-              "constraint",
-              "option",
-              "tradeoff",
-              "risk",
-              "open_question",
-              "agreement",
-              "unresolved_difference",
-            ].map((type) => (
-              <div className="alignment-column" key={type}>
+            {ALIGNMENT_TYPES.map((type) => (
+              <div className="alignment-column" key={type} data-type={type}>
                 <h3>{type.replaceAll("_", " ")}</h3>
                 {snapshot.alignmentNodes
                   .filter((node) => node.type === type)
@@ -315,9 +366,14 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>ADR editor</h2>
-            <button className="button" disabled={!canSteer} onClick={() => canSteer && void runAction(() => api.approveAdr(roomId, me!.id))} type="button">
-              Approve ADR
-            </button>
+            <div className="row-actions">
+              <span className="status-chip" data-status={snapshot.adr.status}>
+                {snapshot.adr.status.replaceAll("_", " ")}
+              </span>
+              <button className="button" disabled={!canSteer} onClick={() => canSteer && void runAction(() => api.approveAdr(roomId, me!.id))} type="button">
+                Approve ADR
+              </button>
+            </div>
           </div>
           {adrSectionOrder.map((section) => {
             const claim = claimFor("adr_section", section);
@@ -372,6 +428,7 @@ export function RoomPage() {
                   onChange={(event) => setAdrDrafts((current) => ({ ...current, [section]: event.target.value }))}
                 />
                 <div className="row-actions">
+                  <small>{snapshot.adr.reviews[section].length} reviewer(s)</small>
                   <button
                     className="button primary"
                     disabled={!mine}
@@ -380,7 +437,6 @@ export function RoomPage() {
                   >
                     Save section
                   </button>
-                  <small>{snapshot.adr.reviews[section].length} reviewer(s)</small>
                 </div>
               </article>
             );
@@ -391,6 +447,11 @@ export function RoomPage() {
           <div className="panel-header">
             <h2>Implementation plan</h2>
             <div className="row-actions">
+              {snapshot.plan.status ? (
+                <span className="status-chip" data-status={snapshot.plan.status}>
+                  {snapshot.plan.status.replaceAll("_", " ")}
+                </span>
+              ) : null}
               <button className="button" disabled={!canParticipate} onClick={() => canParticipate && void runAction(() => api.generatePlan(roomId, me!.id))} type="button">
                 Generate plan
               </button>
@@ -405,8 +466,8 @@ export function RoomPage() {
               >
                 Generate handoff
               </button>
-              <Link className="button" to={`/handoff/${roomId}`}>
-                Handoff
+              <Link className="button ghost" to={`/handoff/${roomId}`}>
+                Handoff →
               </Link>
             </div>
           </div>
@@ -458,6 +519,7 @@ export function RoomPage() {
                     onChange={(event) => setWorkstreamEdits((current) => ({ ...current, [item.id]: event.target.value }))}
                   />
                   <div className="row-actions">
+                    <small>First step · {item.firstStep}</small>
                     <button
                       className="button primary"
                       disabled={!mine}
@@ -466,7 +528,6 @@ export function RoomPage() {
                     >
                       Save workstream
                     </button>
-                    <small>First step: {item.firstStep}</small>
                   </div>
                 </article>
               );
@@ -481,10 +542,11 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Your work</h2>
-            <small>Pending deltas visible to: you and the orchestrator only</small>
           </div>
+          <small>Pending deltas visible only to you and the orchestrator.</small>
           <form
             className="stack-form"
+            style={{ marginTop: "0.6rem" }}
             onSubmit={async (event) => {
               event.preventDefault();
               if (!canParticipate || !agentDeltaText.trim()) {
@@ -496,7 +558,7 @@ export function RoomPage() {
           >
             <textarea
               disabled={!canParticipate}
-              placeholder={canParticipate ? "Simulate a private agent delta or jot a local insight for promotion." : "Observers cannot attach private agents."}
+              placeholder={canParticipate ? "Simulate a private agent delta or a local insight you might promote." : "Observers cannot attach private agents."}
               rows={3}
               value={agentDeltaText}
               onChange={(event) => setAgentDeltaText(event.target.value)}
@@ -510,6 +572,7 @@ export function RoomPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Pending</h2>
+            <span className="badge">{pendingCount}</span>
           </div>
           {snapshot.pendingDeltas.filter((item) => item.status === "pending").map((item) => (
             <div className="editor-card" key={item.id}>
@@ -530,12 +593,13 @@ export function RoomPage() {
               </div>
             </div>
           ))}
-          {!snapshot.pendingDeltas.filter((item) => item.status === "pending").length ? <p className="empty-state">No pending private deltas.</p> : null}
+          {!pendingCount ? <p className="empty-state">No pending private deltas.</p> : null}
         </section>
 
         <section className="panel">
           <div className="panel-header">
             <h2>Routed to me</h2>
+            <span className="badge">{snapshot.routedToParticipant.length}</span>
           </div>
           {snapshot.routedToParticipant.map((item) => (
             <div className="list-card" key={item.id}>

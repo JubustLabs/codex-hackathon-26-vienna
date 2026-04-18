@@ -15,15 +15,19 @@ export function SettingsPage() {
     <section className="single-column-page">
       <div className="panel">
         <div className="panel-header">
-          <h1>Workspace guardrails</h1>
+          <div>
+            <p className="eyebrow">Settings</p>
+            <h1>Workspace guardrails</h1>
+          </div>
+          <span className="badge">{guardrails.length}</span>
           <p>This slice keeps management read-only. The room reads these rules into orchestration and approval gates.</p>
         </div>
         {guardrails.map((guardrail) => (
-          <div className="list-card" key={guardrail.id}>
+          <article className="list-card" key={guardrail.id}>
             <strong>{guardrail.title}</strong>
             <span>{guardrail.description}</span>
-            <small>{guardrail.key}</small>
-          </div>
+            <small className="role-tag">{guardrail.key}</small>
+          </article>
         ))}
       </div>
     </section>

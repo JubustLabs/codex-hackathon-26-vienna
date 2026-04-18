@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import { api } from "@/lib/api";
 
@@ -19,12 +19,22 @@ export function AdrDetailPage() {
     <section className="single-column-page">
       <div className="panel">
         <div className="panel-header">
-          <h1>ADR detail</h1>
-          <p>Status: {adr.status}</p>
+          <div>
+            <p className="eyebrow">ADR detail</p>
+            <h1>Architecture decision record</h1>
+          </div>
+          <div className="row-actions">
+            <span className="status-chip" data-status={adr.status}>
+              {String(adr.status).replaceAll("_", " ")}
+            </span>
+            <Link className="button ghost" to={`/rooms/${roomId}`}>
+              ← Back to room
+            </Link>
+          </div>
         </div>
         {Object.entries(adr.sections).map(([key, value]) => (
           <article className="list-card" key={key}>
-            <strong>{key}</strong>
+            <strong>{key.replaceAll("_", " ")}</strong>
             <span>{String(value) || "Empty"}</span>
           </article>
         ))}

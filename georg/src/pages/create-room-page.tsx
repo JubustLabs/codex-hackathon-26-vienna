@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import type { Participant } from "@shared/contracts";
 
@@ -54,25 +54,33 @@ export function CreateRoomPage() {
     <section className="single-column-page">
       <div className="panel">
         <div className="panel-header">
-          <h1>Create room</h1>
+          <div>
+            <p className="eyebrow">New decision</p>
+            <h1>Create room</h1>
+          </div>
+          <Link className="button ghost" to="/">
+            ← Workspace
+          </Link>
           <p>Start with a bounded decision brief. This flow also records the first room participant so the approval set starts anchored.</p>
         </div>
         <form className="stack-form" onSubmit={onSubmit}>
-          <label className="field">
-            <span>Your name</span>
-            <input value={form.creatorName} onChange={(event) => setForm((current) => ({ ...current, creatorName: event.target.value }))} />
-          </label>
-          <label className="field">
-            <span>Your role</span>
-            <select
-              value={form.creatorRole}
-              onChange={(event) => setForm((current) => ({ ...current, creatorRole: event.target.value as Participant["role"] }))}
-            >
-              <option value="decision_owner">Decision owner</option>
-              <option value="contributor">Contributor</option>
-              <option value="observer">Observer</option>
-            </select>
-          </label>
+          <div className="overview-columns" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <label className="field">
+              <span>Your name</span>
+              <input value={form.creatorName} onChange={(event) => setForm((current) => ({ ...current, creatorName: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Your role</span>
+              <select
+                value={form.creatorRole}
+                onChange={(event) => setForm((current) => ({ ...current, creatorRole: event.target.value as Participant["role"] }))}
+              >
+                <option value="decision_owner">Decision owner</option>
+                <option value="contributor">Contributor</option>
+                <option value="observer">Observer</option>
+              </select>
+            </label>
+          </div>
           <label className="field">
             <span>Topic</span>
             <input value={form.topic} onChange={(event) => setForm((current) => ({ ...current, topic: event.target.value }))} />
@@ -98,13 +106,15 @@ export function CreateRoomPage() {
             <textarea value={form.successBar} onChange={(event) => setForm((current) => ({ ...current, successBar: event.target.value }))} rows={3} />
           </label>
           <label className="field">
-            <span>Topic tags</span>
+            <span>Topic tags (comma-separated)</span>
             <input value={form.topicTags} onChange={(event) => setForm((current) => ({ ...current, topicTags: event.target.value }))} />
           </label>
-          {error ? <p className="empty-state">{error}</p> : null}
-          <button className="button primary" disabled={submitting} type="submit">
-            {submitting ? "Creating…" : "Create room"}
-          </button>
+          {error ? <p className="empty-state error-state">{error}</p> : null}
+          <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+            <button className="button primary" disabled={submitting} type="submit">
+              {submitting ? "Creating…" : "Create room →"}
+            </button>
+          </div>
         </form>
       </div>
     </section>

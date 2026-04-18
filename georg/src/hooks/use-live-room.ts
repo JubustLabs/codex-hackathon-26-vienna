@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { RoomSnapshot } from "@shared/contracts";
 
@@ -9,20 +9,25 @@ export function useLiveRoom(roomId: string | undefined, viewerId: string | undef
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useEffectEvent(async () => {
+  const viewerRef = useRef(viewerId);
+  useEffect(() => {
+    viewerRef.current = viewerId;
+  }, [viewerId]);
+
+  const refresh = useCallback(async () => {
     if (!roomId) {
       return;
     }
     try {
       setError(null);
-      const next = await api.roomSnapshot(roomId, viewerId);
+      const next = await api.roomSnapshot(roomId, viewerRef.current);
       setSnapshot(next);
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : "Failed to load room");
     } finally {
       setLoading(false);
     }
-  });
+  }, [roomId]);
 
   useEffect(() => {
     setLoading(true);
@@ -48,6 +53,6 @@ export function useLiveRoom(roomId: string | undefined, viewerId: string | undef
     snapshot,
     loading,
     error,
-    refresh: () => refresh(),
+    refresh,
   };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import { api } from "@/lib/api";
 
@@ -15,9 +15,22 @@ export function HandoffPage() {
     <section className="single-column-page">
       <div className="panel">
         <div className="panel-header">
-          <h1>Handoff package</h1>
+          <div>
+            <p className="eyebrow">Handoff package</p>
+            <h1>Shippable artifact</h1>
+          </div>
+          <div className="row-actions">
+            {payload ? <span className="status-chip" data-status="approved">ready</span> : <span className="status-chip" data-status="draft">pending</span>}
+            <Link className="button ghost" to={`/rooms/${roomId}`}>
+              ← Back to room
+            </Link>
+          </div>
         </div>
-        <pre className="code-block">{payload ? JSON.stringify(payload, null, 2) : "Handoff package becomes available after plan approval."}</pre>
+        {payload ? (
+          <pre className="code-block">{JSON.stringify(payload, null, 2)}</pre>
+        ) : (
+          <p className="empty-state">The handoff package is generated after both ADR and plan are approved in the room.</p>
+        )}
       </div>
     </section>
   );

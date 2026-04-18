@@ -22,11 +22,14 @@ export function App() {
     <div className="app-shell">
       <header className="topbar">
         <Link className="brand" to="/">
-          Realtime Alignment Workspace
+          <span className="brand-wrap">
+            <span>Realtime Alignment Workspace</span>
+            <span className="brand-tag">agreement before generation</span>
+          </span>
         </Link>
         <nav className="topnav">
           {navItems.map((item) => (
-            <NavLink key={item.href} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")} to={item.href}>
+            <NavLink key={item.href} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")} to={item.href} end={item.href === "/"}>
               {item.label}
             </NavLink>
           ))}
@@ -46,6 +49,13 @@ export function App() {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
+
+      <footer className="footer">
+        <span className="footer-dot">
+          <strong>Live workspace</strong> · realtime ADR + plan + handoff
+        </span>
+        <span>Bun · React 19 · SQLite · POC vertical slice</span>
+      </footer>
     </div>
   );
 }

@@ -23,15 +23,15 @@ export function WorkspaceOverviewPage() {
   return (
     <section className="page-grid">
       <div className="hero-card">
-        <p className="eyebrow">POC vertical slice</p>
+        <p className="eyebrow">POC · vertical slice</p>
         <h1>Agreement before generation</h1>
         <p>
-          This slice implements the plan as a runnable Bun + React + SQLite workspace: realtime room, private deltas, shared
-          orchestrator, ADR flow, plan generation, and handoff export.
+          A realtime room where humans and private agents converge on a decision, an ADR, and an executable plan — with ownership,
+          guardrails, and handoff baked in.
         </p>
         <div className="hero-actions">
           <Link className="button primary" to="/rooms/new">
-            Create room
+            Create a room →
           </Link>
           {rooms[0] ? (
             <Link className="button" to={`/rooms/${rooms[0].id}`}>
@@ -39,19 +39,40 @@ export function WorkspaceOverviewPage() {
             </Link>
           ) : null}
         </div>
+        <div className="stat-strip">
+          <div className="stat">
+            <span className="stat-value">{rooms.length}</span>
+            <span className="stat-label">Live rooms</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{guardrails.length}</span>
+            <span className="stat-label">Guardrails</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{patterns.length}</span>
+            <span className="stat-label">Patterns</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{components.length}</span>
+            <span className="stat-label">Components</span>
+          </div>
+        </div>
       </div>
 
       <div className="overview-columns">
         <section className="panel">
           <div className="panel-header">
             <h2>Live rooms</h2>
+            <Link className="button ghost" to="/rooms/new">
+              New room
+            </Link>
           </div>
           {rooms.length ? (
             rooms.map((room) => (
               <Link className="list-card" key={room.id} to={`/rooms/${room.id}`}>
                 <strong>{room.topic}</strong>
                 <span>{room.decision}</span>
-                <small>{room.mode}</small>
+                <small className="role-tag">{room.mode.replaceAll("_", " ")}</small>
               </Link>
             ))
           ) : (
@@ -62,12 +83,15 @@ export function WorkspaceOverviewPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Guardrails</h2>
+            <Link className="button ghost" to="/settings">
+              All
+            </Link>
           </div>
           {guardrails.map((guardrail) => (
             <div className="list-card" key={guardrail.id}>
               <strong>{guardrail.title}</strong>
               <span>{guardrail.description}</span>
-              <small>{guardrail.severity}</small>
+              <small className="role-tag">{guardrail.severity}</small>
             </div>
           ))}
         </section>
@@ -76,14 +100,14 @@ export function WorkspaceOverviewPage() {
           <div className="panel-header">
             <h2>Seeded context</h2>
           </div>
-          <div className="list-card">
+          <Link className="list-card" to="/patterns">
             <strong>{patterns.length} patterns</strong>
-            <span>Seeded tag matches are available in-room from the start.</span>
-          </div>
-          <div className="list-card">
+            <span>Tag-matched, ready in every room from the first utterance.</span>
+          </Link>
+          <Link className="list-card" to="/components">
             <strong>{components.length} reusable components</strong>
-            <span>Components, server, and event-log evidence are already catalogued.</span>
-          </div>
+            <span>Catalogued with evidence so proposals trace back to real code.</span>
+          </Link>
         </section>
       </div>
     </section>
